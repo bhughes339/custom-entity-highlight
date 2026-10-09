@@ -1,0 +1,509 @@
+package com.customentityhighlight;
+
+import com.google.common.base.Strings;
+import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
+import com.google.gson.reflect.TypeToken;
+import com.google.inject.Provides;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.IntFunction;
+import javax.inject.Inject;
+import javax.swing.SwingUtilities;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.Actor;
+import net.runelite.api.Client;
+import net.runelite.api.GameObject;
+import net.runelite.api.GameState;
+import net.runelite.api.NPC;
+import net.runelite.api.NPCComposition;
+import net.runelite.api.ObjectComposition;
+import net.runelite.api.Scene;
+import net.runelite.api.Tile;
+import net.runelite.api.TileObject;
+import net.runelite.api.WorldView;
+import net.runelite.api.events.DecorativeObjectDespawned;
+import net.runelite.api.events.DecorativeObjectSpawned;
+import net.runelite.api.events.GameObjectDespawned;
+import net.runelite.api.events.GameObjectSpawned;
+import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GroundObjectDespawned;
+import net.runelite.api.events.GroundObjectSpawned;
+import net.runelite.api.events.NpcChanged;
+import net.runelite.api.events.NpcDespawned;
+import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.events.WallObjectDespawned;
+import net.runelite.api.events.WallObjectSpawned;
+import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.ProfileChanged;
+import net.runelite.client.plugins.Plugin;
+import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.ImageUtil;
+
+@Slf4j
+@PluginDescriptor(
+	name = "Custom Entity Highlight",
+	description = "Highlights NPCs and objects by right-click menu option, name or id",
+	tags = {"highlight", "menu", "option", "name", "id", "npc", "object", "bank"}
+)
+public class CustomEntityHighlightPlugin extends Plugin
+{
+	private static final Type GROUP_LIST_TYPE = new TypeToken<List<HighlightGroup>>()
+	{
+	}.getType();
+
+	@Inject
+	private Client client;
+
+	@Inject
+	private ClientThread clientThread;
+
+	@Inject
+	private OverlayManager overlayManager;
+
+	@Inject
+	private ClientToolbar clientToolbar;
+
+	@Inject
+	private ConfigManager configManager;
+
+	@Inject
+	private Gson gson;
+
+	@Inject
+	private CustomEntityHighlightOverlay overlay;
+
+	@Inject
+	private CustomEntityHighlightConfig config;
+
+	private CustomEntityHighlightPanel panel;
+	private NavigationButton navigationButton;
+
+	/**
+	 * The groups being drawn. Only touched on the client thread; the panel edits its own copies.
+	 */
+	@Getter(AccessLevel.PACKAGE)
+	private List<HighlightGroup> groups = Collections.emptyList();
+
+	// Parsed entries of each group, by group index
+	private List<GroupMatcher> matchers = Collections.emptyList();
+
+	/**
+	 * NPCs that have, or can transform into something that has, an option matching any group.
+	 */
+	@Getter(AccessLevel.PACKAGE)
+	private final Set<NPC> npcs = new HashSet<>();
+
+	/**
+	 * Objects that have, or can transform into something that has, an option matching any group.
+	 */
+	@Getter(AccessLevel.PACKAGE)
+	private final Set<TileObject> objects = new HashSet<>();
+
+	// Definition id -> indexes of the groups whose entries match one of that definition's options
+	private final Map<Integer, BitSet> npcMatches = new HashMap<>();
+	private final Map<Integer, BitSet> objectMatches = new HashMap<>();
+
+	@Provides
+	CustomEntityHighlightConfig provideConfig(ConfigManager configManager)
+	{
+		return configManager.getConfig(CustomEntityHighlightConfig.class);
+	}
+
+	@Override
+	protected void startUp()
+	{
+		panel = injector.getInstance(CustomEntityHighlightPanel.class);
+		navigationButton = NavigationButton.builder()
+			.tooltip("Custom Entity Highlight")
+			.icon(ImageUtil.loadImageResource(getClass(), "panel_icon.png"))
+			.priority(7)
+			.panel(panel)
+			.build();
+		clientToolbar.addNavigation(navigationButton);
+
+		overlayManager.add(overlay);
+		clientThread.invoke(this::loadGroups);
+	}
+
+	@Override
+	protected void shutDown()
+	{
+		overlayManager.remove(overlay);
+		clientToolbar.removeNavigation(navigationButton);
+		navigationButton = null;
+		panel = null;
+
+		clientThread.invoke(() ->
+		{
+			npcs.clear();
+			objects.clear();
+			npcMatches.clear();
+			objectMatches.clear();
+			groups = Collections.emptyList();
+			matchers = Collections.emptyList();
+		});
+	}
+
+	@Subscribe
+	public void onConfigChanged(ConfigChanged event)
+	{
+		if (CustomEntityHighlightConfig.GROUP.equals(event.getGroup())
+			&& CustomEntityHighlightConfig.GROUPS_KEY.equals(event.getKey()))
+		{
+			clientThread.invoke(this::loadGroups);
+		}
+	}
+
+	@Subscribe
+	public void onProfileChanged(ProfileChanged event)
+	{
+		clientThread.invoke(this::loadGroups);
+		SwingUtilities.invokeLater(() ->
+		{
+			if (panel != null)
+			{
+				panel.rebuild();
+			}
+		});
+	}
+
+	@Subscribe
+	public void onGameStateChanged(GameStateChanged event)
+	{
+		switch (event.getGameState())
+		{
+			case LOADING:
+				// Objects are respawned after the scene loads
+				objects.clear();
+				break;
+			case LOGIN_SCREEN:
+			case HOPPING:
+				objects.clear();
+				npcs.clear();
+				break;
+		}
+	}
+
+	@Subscribe
+	public void onNpcSpawned(NpcSpawned event)
+	{
+		addNpc(event.getNpc());
+	}
+
+	@Subscribe
+	public void onNpcChanged(NpcChanged event)
+	{
+		NPC npc = event.getNpc();
+		npcs.remove(npc);
+		addNpc(npc);
+	}
+
+	@Subscribe
+	public void onNpcDespawned(NpcDespawned event)
+	{
+		npcs.remove(event.getNpc());
+	}
+
+	@Subscribe
+	public void onGameObjectSpawned(GameObjectSpawned event)
+	{
+		addObject(event.getGameObject());
+	}
+
+	@Subscribe
+	public void onGameObjectDespawned(GameObjectDespawned event)
+	{
+		objects.remove(event.getGameObject());
+	}
+
+	@Subscribe
+	public void onWallObjectSpawned(WallObjectSpawned event)
+	{
+		addObject(event.getWallObject());
+	}
+
+	@Subscribe
+	public void onWallObjectDespawned(WallObjectDespawned event)
+	{
+		objects.remove(event.getWallObject());
+	}
+
+	@Subscribe
+	public void onDecorativeObjectSpawned(DecorativeObjectSpawned event)
+	{
+		addObject(event.getDecorativeObject());
+	}
+
+	@Subscribe
+	public void onDecorativeObjectDespawned(DecorativeObjectDespawned event)
+	{
+		objects.remove(event.getDecorativeObject());
+	}
+
+	@Subscribe
+	public void onGroundObjectSpawned(GroundObjectSpawned event)
+	{
+		addObject(event.getGroundObject());
+	}
+
+	@Subscribe
+	public void onGroundObjectDespawned(GroundObjectDespawned event)
+	{
+		objects.remove(event.getGroundObject());
+	}
+
+	/**
+	 * Reads the saved groups. Returns new objects on every call, so callers can edit them freely.
+	 */
+	List<HighlightGroup> readSavedGroups()
+	{
+		String json = config.groups();
+		if (Strings.isNullOrEmpty(json))
+		{
+			return new ArrayList<>();
+		}
+
+		try
+		{
+			List<HighlightGroup> saved = gson.fromJson(json, GROUP_LIST_TYPE);
+			if (saved != null)
+			{
+				saved.removeIf(group -> group == null);
+				return saved;
+			}
+		}
+		catch (JsonParseException e)
+		{
+			log.warn("Unable to parse saved highlight groups", e);
+		}
+		return new ArrayList<>();
+	}
+
+	void saveGroups(List<HighlightGroup> groups)
+	{
+		configManager.setConfiguration(CustomEntityHighlightConfig.GROUP, CustomEntityHighlightConfig.GROUPS_KEY,
+			gson.toJson(groups, GROUP_LIST_TYPE));
+	}
+
+	/**
+	 * Returns the indexes of the groups that match the NPC's current form, or null if none do.
+	 */
+	BitSet getMatchingGroups(NPC npc, NPCComposition current)
+	{
+		return withBaseIdMatches(npcMatches(current.getId()), npc.getId(), current.getId());
+	}
+
+	/**
+	 * Returns the indexes of the groups that match the object's current form, or null if none do.
+	 */
+	BitSet getMatchingGroups(TileObject object, ObjectComposition current)
+	{
+		return withBaseIdMatches(objectMatches(current.getId()), object.getId(), current.getId());
+	}
+
+	/**
+	 * Adds groups that list the base id of a transformed entity, so either of its ids can be used.
+	 */
+	private BitSet withBaseIdMatches(BitSet matches, int baseId, int currentId)
+	{
+		if (baseId != currentId)
+		{
+			for (int i = 0; i < matchers.size(); i++)
+			{
+				if (!matches.get(i) && matchers.get(i).matchesId(baseId))
+				{
+					matches = (BitSet) matches.clone();
+					matches.set(i);
+				}
+			}
+		}
+		return matches.isEmpty() ? null : matches;
+	}
+
+	/**
+	 * Returns the object's current form, following any varbit-driven transformation.
+	 */
+	ObjectComposition getCurrentComposition(TileObject object)
+	{
+		ObjectComposition comp = client.getObjectDefinition(object.getId());
+		if (comp != null && comp.getImpostorIds() != null)
+		{
+			comp = comp.getImpostor();
+		}
+		return comp;
+	}
+
+	private void loadGroups()
+	{
+		List<HighlightGroup> loaded = readSavedGroups();
+		List<GroupMatcher> loadedMatchers = new ArrayList<>(loaded.size());
+		for (HighlightGroup group : loaded)
+		{
+			loadedMatchers.add(GroupMatcher.of(group));
+		}
+
+		groups = loaded;
+
+		// Appearance changes don't affect which entities match, so only rescan when the entries change
+		if (!loadedMatchers.equals(matchers))
+		{
+			matchers = loadedMatchers;
+			npcMatches.clear();
+			objectMatches.clear();
+			npcs.clear();
+			objects.clear();
+
+			if (client.getGameState() == GameState.LOGGED_IN)
+			{
+				rescan(client.getTopLevelWorldView());
+			}
+		}
+	}
+
+	private void rescan(WorldView worldView)
+	{
+		for (NPC npc : worldView.npcs())
+		{
+			addNpc(npc);
+		}
+
+		Scene scene = worldView.getScene();
+		for (Tile[][] plane : scene.getTiles())
+		{
+			for (Tile[] row : plane)
+			{
+				for (Tile tile : row)
+				{
+					if (tile == null)
+					{
+						continue;
+					}
+
+					GameObject[] gameObjects = tile.getGameObjects();
+					if (gameObjects != null)
+					{
+						for (GameObject gameObject : gameObjects)
+						{
+							// Players and NPCs also occupy game object slots
+							if (gameObject != null && !(gameObject.getRenderable() instanceof Actor))
+							{
+								addObject(gameObject);
+							}
+						}
+					}
+
+					addObject(tile.getWallObject());
+					addObject(tile.getDecorativeObject());
+					addObject(tile.getGroundObject());
+				}
+			}
+		}
+
+		for (WorldView subWorldView : worldView.worldViews())
+		{
+			rescan(subWorldView);
+		}
+	}
+
+	private void addNpc(NPC npc)
+	{
+		if (matchers.isEmpty() || npc == null)
+		{
+			return;
+		}
+
+		NPCComposition comp = npc.getComposition();
+		if (comp == null)
+		{
+			return;
+		}
+
+		if (!npcMatches(comp.getId()).isEmpty() || anyIdMatches(comp.getConfigs(), this::npcMatches))
+		{
+			npcs.add(npc);
+		}
+	}
+
+	private void addObject(TileObject object)
+	{
+		if (matchers.isEmpty() || object == null)
+		{
+			return;
+		}
+
+		ObjectComposition comp = client.getObjectDefinition(object.getId());
+		if (comp == null)
+		{
+			return;
+		}
+
+		if (!objectMatches(comp.getId()).isEmpty() || anyIdMatches(comp.getImpostorIds(), this::objectMatches))
+		{
+			objects.add(object);
+		}
+	}
+
+	private BitSet npcMatches(int id)
+	{
+		return npcMatches.computeIfAbsent(id, i ->
+		{
+			NPCComposition comp = client.getNpcDefinition(i);
+			return comp != null ? matchingGroups(i, comp.getName(), comp.getActions()) : new BitSet();
+		});
+	}
+
+	private BitSet objectMatches(int id)
+	{
+		return objectMatches.computeIfAbsent(id, i ->
+		{
+			ObjectComposition comp = client.getObjectDefinition(i);
+			return comp != null ? matchingGroups(i, comp.getName(), comp.getActions()) : new BitSet();
+		});
+	}
+
+	private static boolean anyIdMatches(int[] ids, IntFunction<BitSet> matches)
+	{
+		if (ids == null)
+		{
+			return false;
+		}
+
+		for (int id : ids)
+		{
+			if (id != -1 && !matches.apply(id).isEmpty())
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private BitSet matchingGroups(int id, String name, String[] actions)
+	{
+		BitSet matches = new BitSet();
+		for (int i = 0; i < matchers.size(); i++)
+		{
+			if (matchers.get(i).matches(id, name, actions))
+			{
+				matches.set(i);
+			}
+		}
+		return matches;
+	}
+}
