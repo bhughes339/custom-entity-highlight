@@ -58,8 +58,8 @@ import net.runelite.client.util.ImageUtil;
 @Slf4j
 @PluginDescriptor(
 	name = "Custom Entity Highlight",
-	description = "Highlights NPCs and objects by right-click menu option, name or id",
-	tags = {"highlight", "menu", "option", "name", "id", "npc", "object", "bank"}
+	description = "Highlights NPCs and objects by right-click menu option or name",
+	tags = {"highlight", "menu", "option", "name", "npc", "object", "bank"}
 )
 public class CustomEntityHighlightPlugin extends Plugin
 {
@@ -304,35 +304,21 @@ public class CustomEntityHighlightPlugin extends Plugin
 	/**
 	 * Returns the indexes of the groups that match the NPC's current form, or null if none do.
 	 */
-	BitSet getMatchingGroups(NPC npc, NPCComposition current)
+	BitSet getMatchingGroups(NPCComposition current)
 	{
-		return withBaseIdMatches(npcMatches(current.getId()), npc.getId(), current.getId());
+		return nullIfEmpty(npcMatches(current.getId()));
 	}
 
 	/**
 	 * Returns the indexes of the groups that match the object's current form, or null if none do.
 	 */
-	BitSet getMatchingGroups(TileObject object, ObjectComposition current)
+	BitSet getMatchingGroups(ObjectComposition current)
 	{
-		return withBaseIdMatches(objectMatches(current.getId()), object.getId(), current.getId());
+		return nullIfEmpty(objectMatches(current.getId()));
 	}
 
-	/**
-	 * Adds groups that list the base id of a transformed entity, so either of its ids can be used.
-	 */
-	private BitSet withBaseIdMatches(BitSet matches, int baseId, int currentId)
+	private static BitSet nullIfEmpty(BitSet matches)
 	{
-		if (baseId != currentId)
-		{
-			for (int i = 0; i < matchers.size(); i++)
-			{
-				if (!matches.get(i) && matchers.get(i).matchesId(baseId))
-				{
-					matches = (BitSet) matches.clone();
-					matches.set(i);
-				}
-			}
-		}
 		return matches.isEmpty() ? null : matches;
 	}
 
@@ -464,7 +450,7 @@ public class CustomEntityHighlightPlugin extends Plugin
 		return npcMatches.computeIfAbsent(id, i ->
 		{
 			NPCComposition comp = client.getNpcDefinition(i);
-			return comp != null ? matchingGroups(i, comp.getName(), comp.getActions()) : new BitSet();
+			return comp != null ? matchingGroups(comp.getName(), comp.getActions()) : new BitSet();
 		});
 	}
 
@@ -473,7 +459,7 @@ public class CustomEntityHighlightPlugin extends Plugin
 		return objectMatches.computeIfAbsent(id, i ->
 		{
 			ObjectComposition comp = client.getObjectDefinition(i);
-			return comp != null ? matchingGroups(i, comp.getName(), comp.getActions()) : new BitSet();
+			return comp != null ? matchingGroups(comp.getName(), comp.getActions()) : new BitSet();
 		});
 	}
 
@@ -494,12 +480,12 @@ public class CustomEntityHighlightPlugin extends Plugin
 		return false;
 	}
 
-	private BitSet matchingGroups(int id, String name, String[] actions)
+	private BitSet matchingGroups(String name, String[] actions)
 	{
 		BitSet matches = new BitSet();
 		for (int i = 0; i < matchers.size(); i++)
 		{
-			if (matchers.get(i).matches(id, name, actions))
+			if (matchers.get(i).matches(name, actions))
 			{
 				matches.set(i);
 			}

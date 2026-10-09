@@ -2,9 +2,7 @@ package com.customentityhighlight;
 
 import com.google.common.base.Strings;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -27,7 +25,6 @@ class GroupMatcher
 
 	List<String> options;
 	List<String> names;
-	Set<Integer> ids;
 
 	// Compiled from the entries above, so equal entries always give equal patterns
 	@EqualsAndHashCode.Exclude
@@ -39,22 +36,9 @@ class GroupMatcher
 
 	static GroupMatcher of(HighlightGroup group)
 	{
-		Set<Integer> ids = new HashSet<>();
-		for (String id : Text.fromCSV(Strings.nullToEmpty(group.getEntityIds())))
-		{
-			try
-			{
-				ids.add(Integer.parseInt(id));
-			}
-			catch (NumberFormatException e)
-			{
-				// Ignore entries that aren't numbers
-			}
-		}
-
 		List<String> options = splitEntries(group.getMenuOptions());
 		List<String> names = splitEntries(group.getEntityNames());
-		return new GroupMatcher(options, names, ids, compileAll(options), compileAll(names));
+		return new GroupMatcher(options, names, compileAll(options), compileAll(names));
 	}
 
 	/**
@@ -146,20 +130,15 @@ class GroupMatcher
 
 	boolean isEmpty()
 	{
-		return options.isEmpty() && names.isEmpty() && ids.isEmpty();
-	}
-
-	boolean matchesId(int id)
-	{
-		return ids.contains(id);
+		return options.isEmpty() && names.isEmpty();
 	}
 
 	/**
-	 * Whether a definition with this id, name and menu actions matches any of the entries.
+	 * Whether a definition with this name and menu actions matches any of the entries.
 	 */
-	boolean matches(int id, String name, String[] actions)
+	boolean matches(String name, String[] actions)
 	{
-		return matchesId(id) || matchesName(name) || matchesAction(actions);
+		return matchesName(name) || matchesAction(actions);
 	}
 
 	private boolean matchesName(String name)

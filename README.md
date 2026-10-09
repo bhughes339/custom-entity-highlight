@@ -1,6 +1,6 @@
 # Custom Entity Highlight
 
-Highlights NPCs and objects by their right-click menu options, their name or their id. This plugin combines the functionalities of the various excellent entity highlighter plugins in the plugin hub, with an emphasis on customization and scale.
+Highlights NPCs and objects by their right-click menu options or their name. This plugin combines the functionalities of the various excellent entity highlighter plugins in the plugin hub, with an emphasis on customization and scale.
 
 ## Highlight groups
 
@@ -11,7 +11,6 @@ Open the **Custom Entity Highlight** side panel in RuneLite. Click **Add group**
 | Enabled / name | The checkbox turns the group on or off. The name is just a label for you. |
 | Options | Comma-delimited list of right-click menu options to look for, e.g. `bank, collect`. Case-insensitive, with `*` as a wildcard or `/.../` for a regex (see below). |
 | Names | Comma-delimited list of NPC or object names, e.g. `banker, *chest`. Case-insensitive, with `*` as a wildcard or `/.../` for a regex. |
-| IDs | Comma-delimited list of NPC or object ids, e.g. `1613, 10355`. The OSRS Wiki lists the id in each NPC's and object's infobox. |
 | Highlight NPCs / Objects | Turn highlighting on or off for each type of target. |
 | Style | Outline (traces the model), Hull (border around the model), Area (model filled in, no border), Clickbox (exact clickable area) or Tile (tiles it stands on). |
 | Color / Fill | Border and fill colors, including transparency. |
@@ -19,7 +18,7 @@ Open the **Custom Entity Highlight** side panel in RuneLite. Click **Add group**
 | Show names | Draws the NPC or object name above each highlight. |
 | Up / Down / Delete | Reorder or remove the group. |
 
-Options, Names and IDs are saved and applied when you press Enter or leave the field. An NPC or object matches a group if it matches **any** entry in any of the three lists.
+Options and Names are saved and applied when you press Enter or leave the field. An NPC or object matches a group if it matches **any** entry in either list.
 
 You can create as many groups as you want. An NPC or object that matches several groups is drawn by each of them, so you can combine styles (for example, an outline from one group and a tile from another). Groups lower in the list draw on top. If more than one matching group shows names, the name uses the color of the highest one.
 

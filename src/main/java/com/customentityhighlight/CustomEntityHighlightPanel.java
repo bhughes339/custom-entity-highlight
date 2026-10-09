@@ -59,8 +59,8 @@ class CustomEntityHighlightPanel extends PluginPanel
 		title.setForeground(Color.WHITE);
 		header.add(title, BorderLayout.NORTH);
 
-		JLabel help = new JLabel("<html>Each group highlights NPCs and objects that match any of its menu options, "
-			+ "names or ids. Separate entries with commas; options and names can use * as a wildcard, "
+		JLabel help = new JLabel("<html>Each group highlights NPCs and objects that match any of its menu options "
+			+ "or names. Separate entries with commas; options and names can use * as a wildcard, "
 			+ "e.g. <b>bank*</b>, or a regex in slashes, e.g. <b>/bank(-all)?/</b>.</html>");
 		help.setFont(FontManager.getRunescapeSmallFont());
 		header.add(help, BorderLayout.CENTER);
@@ -135,11 +135,6 @@ class CustomEntityHighlightPanel extends PluginPanel
 		onCommit(names, group::setEntityNames);
 		showInvalidEntries(names, "NPC or object names, e.g. \"banker, *chest\". Use * as a wildcard, or /regex/.");
 		addRow(body, row++, "Names", names);
-
-		JTextField ids = new JTextField(group.getEntityIds());
-		ids.setToolTipText("NPC or object ids, e.g. \"1613, 10355\"");
-		onCommit(ids, group::setEntityIds);
-		addRow(body, row++, "IDs", ids);
 
 		JPanel targets = new JPanel(new GridLayout(1, 2));
 		targets.setOpaque(false);

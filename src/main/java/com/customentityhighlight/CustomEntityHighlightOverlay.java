@@ -68,7 +68,7 @@ class CustomEntityHighlightOverlay extends Overlay
 		for (NPC npc : plugin.getNpcs())
 		{
 			NPCComposition comp = npc.getTransformedComposition();
-			BitSet matches = comp != null ? plugin.getMatchingGroups(npc, comp) : null;
+			BitSet matches = comp != null ? plugin.getMatchingGroups(comp) : null;
 			if (matches == null)
 			{
 				continue;
@@ -105,7 +105,7 @@ class CustomEntityHighlightOverlay extends Overlay
 			}
 
 			ObjectComposition comp = plugin.getCurrentComposition(object);
-			BitSet matches = comp != null ? plugin.getMatchingGroups(object, comp) : null;
+			BitSet matches = comp != null ? plugin.getMatchingGroups(comp) : null;
 			if (matches == null)
 			{
 				continue;

@@ -4,7 +4,7 @@ import java.awt.Color;
 import lombok.Data;
 
 /**
- * Which NPCs and objects to highlight (by menu option, name or id) and how to highlight them.
+ * Which NPCs and objects to highlight (by menu option or name) and how to highlight them.
  * Saved to config as JSON, so colors are stored as ARGB ints.
  */
 @Data
@@ -19,7 +19,6 @@ class HighlightGroup
 	// Comma-separated lists; an entity matches if any entry in any list matches
 	private String menuOptions = "";
 	private String entityNames = "";
-	private String entityIds = "";
 	private boolean highlightNpcs = true;
 	private boolean highlightObjects = true;
 	private HighlightStyle style = HighlightStyle.OUTLINE;
