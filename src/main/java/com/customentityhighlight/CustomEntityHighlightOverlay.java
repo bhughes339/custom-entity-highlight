@@ -1,5 +1,6 @@
 package com.customentityhighlight;
 
+import com.google.common.base.Strings;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -92,7 +93,7 @@ class CustomEntityHighlightOverlay extends Overlay
 
 			if (nameStyle != null)
 			{
-				String name = Text.removeTags(comp.getName());
+				String name = label(nameStyle, comp.getName(), comp.getActions());
 				renderName(graphics, npc.getCanvasTextLocation(graphics, name, npc.getLogicalHeight() + 40), name, nameStyle.color);
 			}
 		}
@@ -129,7 +130,7 @@ class CustomEntityHighlightOverlay extends Overlay
 
 			if (nameStyle != null)
 			{
-				String name = Text.removeTags(comp.getName());
+				String name = label(nameStyle, comp.getName(), comp.getActions());
 				renderName(graphics, object.getCanvasTextLocation(graphics, name, 0), name, nameStyle.color);
 			}
 		}
@@ -252,6 +253,35 @@ class CustomEntityHighlightOverlay extends Overlay
 		}
 	}
 
+	/**
+	 * Returns the text to draw above an entity, falling back to its name when the chosen text is missing.
+	 */
+	private static String label(GroupStyle style, String name, String[] actions)
+	{
+		switch (style.labelSource)
+		{
+			case TOP_OPTION:
+				if (actions != null)
+				{
+					for (String action : actions)
+					{
+						if (!Strings.isNullOrEmpty(action))
+						{
+							return Text.removeTags(action);
+						}
+					}
+				}
+				break;
+			case CUSTOM:
+				if (style.customLabel != null)
+				{
+					return style.customLabel;
+				}
+				break;
+		}
+		return Text.removeTags(name);
+	}
+
 	private static void renderName(Graphics2D graphics, Point location, String name, Color color)
 	{
 		if (location != null)
@@ -272,6 +302,9 @@ class CustomEntityHighlightOverlay extends Overlay
 		private final int width;
 		private final int feather;
 		private final BasicStroke stroke;
+		private final LabelSource labelSource;
+		// Null when the custom label is blank
+		private final String customLabel;
 
 		private GroupStyle(HighlightGroup group)
 		{
@@ -283,6 +316,8 @@ class CustomEntityHighlightOverlay extends Overlay
 			width = group.getBorderWidth();
 			feather = group.getOutlineFeather();
 			stroke = new BasicStroke(width);
+			labelSource = group.getLabelSourceOrDefault();
+			customLabel = Strings.emptyToNull(group.getCustomLabel());
 		}
 	}
 }

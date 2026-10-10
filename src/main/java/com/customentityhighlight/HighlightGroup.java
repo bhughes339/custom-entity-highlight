@@ -27,6 +27,9 @@ class HighlightGroup
 	private int borderWidth = 2;
 	private int outlineFeather = 0;
 	private boolean showNames = false;
+	private LabelSource labelSource = LabelSource.NAME;
+	// Text shown when labelSource is CUSTOM; blank uses the entity's name
+	private String customLabel = "";
 
 	Color getHighlightColorValue()
 	{
@@ -42,5 +45,11 @@ class HighlightGroup
 	{
 		// Null if the saved style no longer exists
 		return style != null ? style : HighlightStyle.OUTLINE;
+	}
+
+	LabelSource getLabelSourceOrDefault()
+	{
+		// Null if the saved label source no longer exists
+		return labelSource != null ? labelSource : LabelSource.NAME;
 	}
 }

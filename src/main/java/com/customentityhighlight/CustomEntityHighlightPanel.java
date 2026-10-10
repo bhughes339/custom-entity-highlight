@@ -163,7 +163,26 @@ class CustomEntityHighlightPanel extends PluginPanel
 		addRow(body, row++, "Feather", spinner(group.getOutlineFeather(), 0,
 			HighlightGroup.MAX_OUTLINE_FEATHER, group::setOutlineFeather));
 
-		addRow(body, row, "", checkBox("Show names", group.isShowNames(), group::setShowNames));
+		addRow(body, row++, "", checkBox("Show names", group.isShowNames(), group::setShowNames));
+
+		JTextField customLabel = new JTextField(group.getCustomLabel());
+		customLabel.setToolTipText("Text shown when Label is Custom. Leave blank to show the entity's name.");
+		customLabel.setEnabled(group.getLabelSourceOrDefault() == LabelSource.CUSTOM);
+		onCommit(customLabel, text -> group.setCustomLabel(text.trim()));
+
+		JComboBox<LabelSource> labelSource = new JComboBox<>(LabelSource.values());
+		labelSource.setSelectedItem(group.getLabelSourceOrDefault());
+		labelSource.setToolTipText("<html>Text drawn when Show names is on<br>Name: the NPC or object name<br>"
+			+ "Top option: the first option in its right-click menu<br>Custom: the text below</html>");
+		labelSource.addActionListener(e ->
+		{
+			LabelSource selected = (LabelSource) labelSource.getSelectedItem();
+			group.setLabelSource(selected);
+			customLabel.setEnabled(selected == LabelSource.CUSTOM);
+			save();
+		});
+		addRow(body, row++, "Label", labelSource);
+		addRow(body, row, "Text", customLabel);
 		card.add(body, BorderLayout.CENTER);
 
 		// Footer: reorder and delete
