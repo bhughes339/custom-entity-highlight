@@ -136,10 +136,11 @@ class CustomEntityHighlightPanel extends PluginPanel
 		showInvalidEntries(names, "NPC or object names, e.g. \"banker, *chest\". Use * as a wildcard, or /regex/.");
 		addRow(body, row++, "Names", names);
 
-		JPanel targets = new JPanel(new GridLayout(1, 2));
+		// Each box gets its own width rather than an equal share, so "Objects" isn't cut off
+		JPanel targets = new JPanel(new BorderLayout(4, 0));
 		targets.setOpaque(false);
-		targets.add(checkBox("NPCs", group.isHighlightNpcs(), group::setHighlightNpcs));
-		targets.add(checkBox("Objects", group.isHighlightObjects(), group::setHighlightObjects));
+		targets.add(checkBox("NPCs", group.isHighlightNpcs(), group::setHighlightNpcs), BorderLayout.WEST);
+		targets.add(checkBox("Objects", group.isHighlightObjects(), group::setHighlightObjects), BorderLayout.CENTER);
 		addRow(body, row++, "Highlight", targets);
 
 		JComboBox<HighlightStyle> style = new JComboBox<>(HighlightStyle.values());
