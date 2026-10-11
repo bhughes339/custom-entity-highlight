@@ -164,7 +164,7 @@ class CustomEntityHighlightPanel extends PluginPanel
 		addRow(body, row++, "Feather", spinner(group.getOutlineFeather(), 0,
 			HighlightGroup.MAX_OUTLINE_FEATHER, group::setOutlineFeather));
 
-		addRow(body, row++, "", checkBox("Show names", group.isShowNames(), group::setShowNames));
+		addRow(body, row++, "", checkBox("Show labels", group.isShowNames(), group::setShowNames));
 
 		JTextField customLabel = new JTextField(group.getCustomLabel());
 		customLabel.setToolTipText("Text shown when Label is Custom. Leave blank to show the entity's name.");
@@ -173,7 +173,7 @@ class CustomEntityHighlightPanel extends PluginPanel
 
 		JComboBox<LabelSource> labelSource = new JComboBox<>(LabelSource.values());
 		labelSource.setSelectedItem(group.getLabelSourceOrDefault());
-		labelSource.setToolTipText("<html>Text drawn when Show names is on<br>Name: the NPC or object name<br>"
+		labelSource.setToolTipText("<html>Text drawn when Show labels is on<br>Name: the NPC or object name<br>"
 			+ "Top option: the first option in its right-click menu<br>Custom: the text below</html>");
 		labelSource.addActionListener(e ->
 		{

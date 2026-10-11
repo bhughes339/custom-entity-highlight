@@ -15,8 +15,8 @@ Open the **Custom Entity Highlight** side panel in RuneLite. Click **Add group**
 | Style | Outline (traces the model), Hull (border around the model), Area (model filled in, no border), Clickbox (exact clickable area) or Tile (tiles it stands on). |
 | Color / Fill | Border and fill colors, including transparency. |
 | Width / Feather | Line thickness, and edge softness for the outline style. |
-| Show names | Draws the NPC or object name above each highlight. |
-| Label / Text | What Show names draws: the NPC or object **Name**, its **Top option** (the first option in its right-click menu), or **Custom** text typed in the Text field. Falls back to the name if there is no option or the custom text is blank. |
+| Show labels | Draws text above each highlight. |
+| Label / Text | What Show labels draws: the NPC or object **Name**, its **Top option** (the first option in its right-click menu), or **Custom** text typed in the Text field. Falls back to the name if there is no option or the custom text is blank. |
 | Up / Down / Delete | Reorder or remove the group. |
 
 Options and Names are saved and applied when you press Enter or leave the field. An NPC or object matches a group if it matches **any** entry in either list.
