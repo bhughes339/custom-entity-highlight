@@ -153,7 +153,8 @@ class CustomEntityHighlightPanel extends PluginPanel
 		JComboBox<HighlightStyle> style = new JComboBox<>(HighlightStyle.values());
 		style.setSelectedItem(group.getStyleOrDefault());
 		style.setToolTipText("<html>Outline: traces the model<br>Hull: border around the model<br>"
-			+ "Area: model filled in, no border<br>Clickbox: the exact area you can click<br>Tile: the tiles it stands on</html>");
+			+ "Area: model filled in, no border<br>Clickbox: the exact area you can click<br>Tile: the tiles it stands on<br>"
+			+ "None: no highlight, only the label if Show labels is on</html>");
 		style.addActionListener(e ->
 		{
 			group.setStyle((HighlightStyle) style.getSelectedItem());

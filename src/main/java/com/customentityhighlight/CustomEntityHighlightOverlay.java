@@ -163,6 +163,9 @@ class CustomEntityHighlightOverlay extends Overlay
 			case TILE:
 				renderShape(graphics, npc.getCanvasTilePoly(), style);
 				break;
+			case NONE:
+				// Nothing to draw; the label, if any, is drawn separately
+				break;
 		}
 	}
 
@@ -184,6 +187,9 @@ class CustomEntityHighlightOverlay extends Overlay
 				break;
 			case TILE:
 				renderShape(graphics, object.getCanvasTilePoly(), style);
+				break;
+			case NONE:
+				// Nothing to draw; the label, if any, is drawn separately
 				break;
 		}
 	}
