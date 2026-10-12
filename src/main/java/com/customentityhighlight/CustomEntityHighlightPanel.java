@@ -6,6 +6,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.KeyboardFocusManager;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.util.List;
@@ -18,11 +19,15 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.JTextComponent;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.FontManager;
@@ -60,7 +65,7 @@ class CustomEntityHighlightPanel extends PluginPanel
 		header.add(title, BorderLayout.NORTH);
 
 		JLabel help = new JLabel("<html>Each group highlights NPCs and objects that match any of its menu options "
-			+ "or names. Separate entries with commas; options and names can use * as a wildcard, "
+			+ "or names. Separate entries with commas or new lines; options and names can use * as a wildcard, "
 			+ "e.g. <b>bank*</b>, or a regex in slashes, e.g. <b>/bank(-all)?/</b>.</html>");
 		help.setFont(FontManager.getRunescapeSmallFont());
 		header.add(help, BorderLayout.CENTER);
@@ -126,15 +131,17 @@ class CustomEntityHighlightPanel extends PluginPanel
 		body.setOpaque(false);
 		int row = 0;
 
-		JTextField options = new JTextField(group.getMenuOptions());
+		JTextArea options = entryList(group.getMenuOptions());
 		onCommit(options, group::setMenuOptions);
-		showInvalidEntries(options, "Right-click menu options, e.g. \"bank, collect\". Use * as a wildcard, or /regex/.");
-		addRow(body, row++, "Options", options);
+		showInvalidEntries(options, "Right-click menu options, e.g. \"bank, collect\", or one per line. "
+			+ "Use * as a wildcard, or /regex/.");
+		addRow(body, row++, "Options", scrollable(options));
 
-		JTextField names = new JTextField(group.getEntityNames());
+		JTextArea names = entryList(group.getEntityNames());
 		onCommit(names, group::setEntityNames);
-		showInvalidEntries(names, "NPC or object names, e.g. \"banker, *chest\". Use * as a wildcard, or /regex/.");
-		addRow(body, row++, "Names", names);
+		showInvalidEntries(names, "NPC or object names, e.g. \"banker, *chest\", or one per line. "
+			+ "Use * as a wildcard, or /regex/.");
+		addRow(body, row++, "Names", scrollable(names));
 
 		// Each box gets its own width rather than an equal share, so "Objects" isn't cut off
 		JPanel targets = new JPanel(new BorderLayout(4, 0));
@@ -246,16 +253,40 @@ class CustomEntityHighlightPanel extends PluginPanel
 	}
 
 	/**
-	 * Saves a text field's value when the user presses Enter or leaves the field.
+	 * A three-row text area for a list of entries, where Enter starts a new line.
+	 * Tab still moves to the next field instead of typing a tab.
 	 */
-	private void onCommit(JTextField field, Consumer<String> setter)
+	private static JTextArea entryList(String text)
+	{
+		// One column keeps the preferred width small so the area fills the row instead of widening the panel
+		JTextArea area = new JTextArea(text, 3, 1);
+		area.setLineWrap(true);
+		area.setWrapStyleWord(true);
+		area.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, null);
+		area.setFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, null);
+		return area;
+	}
+
+	private static JScrollPane scrollable(JTextArea area)
+	{
+		return new JScrollPane(area, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+			ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+	}
+
+	/**
+	 * Saves a text component's value when the user leaves it, or presses Enter in a single-line field.
+	 */
+	private void onCommit(JTextComponent field, Consumer<String> setter)
 	{
 		Runnable commit = () ->
 		{
 			setter.accept(field.getText());
 			save();
 		};
-		field.addActionListener(e -> commit.run());
+		if (field instanceof JTextField)
+		{
+			((JTextField) field).addActionListener(e -> commit.run());
+		}
 		field.addFocusListener(new FocusAdapter()
 		{
 			@Override
@@ -268,9 +299,9 @@ class CustomEntityHighlightPanel extends PluginPanel
 
 	/**
 	 * Shows the field's text in red, with the errors as its tooltip, while it has a regex that doesn't compile.
-	 * Checked now and whenever the user presses Enter or leaves the field.
+	 * Checked now and whenever the user leaves the field.
 	 */
-	private static void showInvalidEntries(JTextField field, String tooltip)
+	private static void showInvalidEntries(JTextArea field, String tooltip)
 	{
 		Color foreground = field.getForeground();
 		Runnable check = () ->
@@ -280,7 +311,6 @@ class CustomEntityHighlightPanel extends PluginPanel
 			field.setToolTipText(errors.isEmpty() ? tooltip : "Invalid regex, ignored: " + String.join("; ", errors));
 		};
 		check.run();
-		field.addActionListener(e -> check.run());
 		field.addFocusListener(new FocusAdapter()
 		{
 			@Override

@@ -65,6 +65,13 @@ public class GroupMatcherTest
 	}
 
 	@Test
+	public void newlinesSeparateEntries()
+	{
+		assertEquals(Arrays.asList("bank", "/x,y/", "chest", "banker"),
+			GroupMatcher.splitEntries("bank\n/x,y/\r\n\nchest, banker\n"));
+	}
+
+	@Test
 	public void ignoresInvalidRegexes()
 	{
 		GroupMatcher matcher = matcher("", "/bank(/, banker");

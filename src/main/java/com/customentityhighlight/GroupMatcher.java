@@ -20,8 +20,8 @@ class GroupMatcher
 	// Unnamed definitions are named "null" in the cache
 	private static final String NULL_NAME = "null";
 
-	// Either a regex in slashes, which may contain commas, or anything up to the next comma
-	private static final Pattern ENTRY = Pattern.compile("\\s*(/.*?/)\\s*(?:,|$)|([^,]*),?");
+	// Either a regex in slashes, which may contain commas, or anything up to the next comma or newline
+	private static final Pattern ENTRY = Pattern.compile("\\s*(/.*?/)\\s*(?:[,\\n]|$)|([^,\\n]*)[,\\n]?");
 
 	List<String> options;
 	List<String> names;
@@ -42,7 +42,7 @@ class GroupMatcher
 	}
 
 	/**
-	 * Splits a comma-separated list of option or name entries. Commas inside a regex entry don't split it.
+	 * Splits a list of option or name entries separated by commas or newlines. Commas inside a regex entry don't split it.
 	 */
 	static List<String> splitEntries(String text)
 	{
