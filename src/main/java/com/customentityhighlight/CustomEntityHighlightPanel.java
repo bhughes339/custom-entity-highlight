@@ -112,7 +112,7 @@ class CustomEntityHighlightPanel extends PluginPanel
 		card.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		card.setBorder(new EmptyBorder(8, 8, 8, 8));
 
-		// Header: enabled toggle and name
+		// Header: enabled toggle, name and collapse toggle
 		JPanel header = new JPanel(new BorderLayout(4, 0));
 		header.setOpaque(false);
 
@@ -192,6 +192,26 @@ class CustomEntityHighlightPanel extends PluginPanel
 		addRow(body, row++, "Label", labelSource);
 		addRow(body, row, "Text", customLabel);
 		card.add(body, BorderLayout.CENTER);
+
+		JButton collapse = new JButton();
+		collapse.setFocusPainted(false);
+		collapse.setMargin(new Insets(0, 4, 0, 4));
+		Runnable showCollapsed = () ->
+		{
+			body.setVisible(!group.isCollapsed());
+			collapse.setText(group.isCollapsed() ? "+" : "-");
+			collapse.setToolTipText(group.isCollapsed() ? "Show this group's settings" : "Hide this group's settings");
+		};
+		showCollapsed.run();
+		collapse.addActionListener(e ->
+		{
+			group.setCollapsed(!group.isCollapsed());
+			showCollapsed.run();
+			groupsContainer.revalidate();
+			groupsContainer.repaint();
+			save();
+		});
+		header.add(collapse, BorderLayout.EAST);
 
 		// Footer: reorder and delete
 		JPanel actions = new JPanel(new GridLayout(1, 3, 4, 0));

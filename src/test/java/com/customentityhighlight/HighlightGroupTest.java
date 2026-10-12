@@ -7,6 +7,7 @@ import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
@@ -23,6 +24,7 @@ public class HighlightGroupTest
 	{
 		HighlightGroup group = new HighlightGroup();
 		group.setName("Thieving");
+		group.setCollapsed(true);
 		group.setMenuOptions("pick*, steal-from");
 		group.setStyle(HighlightStyle.CLICKBOX);
 		group.setHighlightColor(new Color(255, 128, 0, 200).getRGB());
@@ -43,6 +45,7 @@ public class HighlightGroupTest
 		HighlightGroup group = loaded.get(0);
 
 		assertTrue(group.isEnabled());
+		assertFalse(group.isCollapsed());
 		assertTrue(group.isHighlightNpcs());
 		assertEquals(HighlightStyle.OUTLINE, group.getStyleOrDefault());
 		assertEquals(2, group.getBorderWidth());

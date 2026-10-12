@@ -16,6 +16,8 @@ class HighlightGroup
 
 	private String name = "New group";
 	private boolean enabled = true;
+	// Whether the panel hides this group's settings
+	private boolean collapsed = false;
 	// Comma-separated lists; an entity matches if any entry in any list matches
 	private String menuOptions = "";
 	private String entityNames = "";
