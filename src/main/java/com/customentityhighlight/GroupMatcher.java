@@ -2,7 +2,9 @@ package com.customentityhighlight;
 
 import com.google.common.base.Strings;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -26,13 +28,13 @@ class GroupMatcher
 	List<String> options;
 	List<String> names;
 
-	// Compiled from the entries above, so equal entries always give equal patterns
+	// Entry -> pattern, in entry order, compiled from the entries above so equal entries always give equal patterns
 	@EqualsAndHashCode.Exclude
 	@ToString.Exclude
-	List<Pattern> optionPatterns;
+	Map<String, Pattern> optionPatterns;
 	@EqualsAndHashCode.Exclude
 	@ToString.Exclude
-	List<Pattern> namePatterns;
+	Map<String, Pattern> namePatterns;
 
 	static GroupMatcher of(HighlightGroup group)
 	{
@@ -79,14 +81,14 @@ class GroupMatcher
 		return errors;
 	}
 
-	private static List<Pattern> compileAll(List<String> entries)
+	private static Map<String, Pattern> compileAll(List<String> entries)
 	{
-		List<Pattern> patterns = new ArrayList<>(entries.size());
+		Map<String, Pattern> patterns = new LinkedHashMap<>();
 		for (String entry : entries)
 		{
 			try
 			{
-				patterns.add(compile(entry));
+				patterns.put(entry, compile(entry));
 			}
 			catch (PatternSyntaxException e)
 			{
@@ -138,51 +140,68 @@ class GroupMatcher
 	 */
 	boolean matches(String name, String[] actions)
 	{
-		return matchesName(name) || matchesAction(actions);
+		return matchedEntry(name, actions) != null;
 	}
 
-	private boolean matchesName(String name)
+	/**
+	 * Returns the first option entry that matches one of the actions, or else the first name entry that matches
+	 * the name, as the user wrote it. Null if nothing matches.
+	 */
+	String matchedEntry(String name, String[] actions)
+	{
+		String entry = matchingOption(actions);
+		return entry != null ? entry : matchingName(name);
+	}
+
+	private String matchingOption(String[] actions)
+	{
+		if (optionPatterns.isEmpty() || actions == null)
+		{
+			return null;
+		}
+
+		List<String> normalized = new ArrayList<>(actions.length);
+		for (String action : actions)
+		{
+			if (action != null)
+			{
+				normalized.add(Text.removeTags(action));
+			}
+		}
+
+		for (Map.Entry<String, Pattern> option : optionPatterns.entrySet())
+		{
+			for (String action : normalized)
+			{
+				if (option.getValue().matcher(action).matches())
+				{
+					return option.getKey();
+				}
+			}
+		}
+		return null;
+	}
+
+	private String matchingName(String name)
 	{
 		if (namePatterns.isEmpty() || name == null)
 		{
-			return false;
+			return null;
 		}
 
 		String normalized = Text.removeTags(name);
 		if (NULL_NAME.equals(normalized))
 		{
-			return false;
+			return null;
 		}
 
-		return matchesAny(namePatterns, normalized);
-	}
-
-	private boolean matchesAction(String[] actions)
-	{
-		if (optionPatterns.isEmpty() || actions == null)
+		for (Map.Entry<String, Pattern> entry : namePatterns.entrySet())
 		{
-			return false;
-		}
-
-		for (String action : actions)
-		{
-			if (action != null && matchesAny(optionPatterns, Text.removeTags(action)))
+			if (entry.getValue().matcher(normalized).matches())
 			{
-				return true;
+				return entry.getKey();
 			}
 		}
-		return false;
-	}
-
-	private static boolean matchesAny(List<Pattern> patterns, String text)
-	{
-		for (Pattern pattern : patterns)
-		{
-			if (pattern.matcher(text).matches())
-			{
-				return true;
-			}
-		}
-		return false;
+		return null;
 	}
 }

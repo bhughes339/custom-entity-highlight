@@ -27,7 +27,7 @@ public class HighlightGroupTest
 		group.setStyle(HighlightStyle.CLICKBOX);
 		group.setHighlightColor(new Color(255, 128, 0, 200).getRGB());
 		group.setShowNames(true);
-		group.setLabelSource(LabelSource.TOP_OPTION);
+		group.setLabelSource(LabelSource.MATCH);
 		group.setCustomLabel("Pickpocket");
 
 		List<HighlightGroup> loaded = gson.fromJson(gson.toJson(Collections.singletonList(group), GROUP_LIST_TYPE), GROUP_LIST_TYPE);
@@ -47,6 +47,14 @@ public class HighlightGroupTest
 		assertEquals(HighlightStyle.OUTLINE, group.getStyleOrDefault());
 		assertEquals(2, group.getBorderWidth());
 		assertEquals(LabelSource.NAME, group.getLabelSourceOrDefault());
+	}
+
+	@Test
+	public void topOptionLabelsLoadAsMatch()
+	{
+		List<HighlightGroup> loaded = gson.fromJson("[{\"labelSource\":\"TOP_OPTION\"}]", GROUP_LIST_TYPE);
+
+		assertEquals(LabelSource.MATCH, loaded.get(0).getLabelSourceOrDefault());
 	}
 
 	@Test

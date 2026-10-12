@@ -3,6 +3,7 @@ package com.customentityhighlight;
 import java.util.Arrays;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
@@ -69,6 +70,16 @@ public class GroupMatcherTest
 	{
 		assertEquals(Arrays.asList("bank", "/x,y/", "chest", "banker"),
 			GroupMatcher.splitEntries("bank\n/x,y/\r\n\nchest, banker\n"));
+	}
+
+	@Test
+	public void reportsFirstMatchedEntry()
+	{
+		// Entries are checked in the order written, options before names
+		assertEquals("coll*", matcher("talk, coll*, bank", "banker").matchedEntry("Banker", BANKER_ACTIONS));
+		assertEquals("/bank.*/", matcher("pickpocket", "chest, /bank.*/").matchedEntry("Banker", BANKER_ACTIONS));
+		assertEquals("bank", matcher("bank", "").matchedEntry("Banker", new String[]{"<col=ff0000>Bank</col>"}));
+		assertNull(matcher("steal", "chest").matchedEntry("Banker", BANKER_ACTIONS));
 	}
 
 	@Test

@@ -75,7 +75,8 @@ class CustomEntityHighlightOverlay extends Overlay
 				continue;
 			}
 
-			GroupStyle nameStyle = null;
+			// The first group drawn that shows labels decides the label
+			int labelGroup = -1;
 			for (int i = matches.nextSetBit(0); i >= 0; i = matches.nextSetBit(i + 1))
 			{
 				GroupStyle style = styles[i];
@@ -85,16 +86,18 @@ class CustomEntityHighlightOverlay extends Overlay
 				}
 
 				renderNpc(graphics, npc, style);
-				if (nameStyle == null && style.group.isShowNames())
+				if (labelGroup == -1 && style.group.isShowNames())
 				{
-					nameStyle = style;
+					labelGroup = i;
 				}
 			}
 
-			if (nameStyle != null)
+			if (labelGroup != -1)
 			{
-				String name = label(nameStyle, comp.getName(), comp.getActions());
-				renderName(graphics, npc.getCanvasTextLocation(graphics, name, npc.getLogicalHeight() + 40), name, nameStyle.color);
+				GroupStyle labelStyle = styles[labelGroup];
+				String matched = labelStyle.labelSource == LabelSource.MATCH ? plugin.getMatchedEntry(labelGroup, comp) : null;
+				String name = label(labelStyle, comp.getName(), matched);
+				renderName(graphics, npc.getCanvasTextLocation(graphics, name, npc.getLogicalHeight() + 40), name, labelStyle.color);
 			}
 		}
 
@@ -112,7 +115,8 @@ class CustomEntityHighlightOverlay extends Overlay
 				continue;
 			}
 
-			GroupStyle nameStyle = null;
+			// The first group drawn that shows labels decides the label
+			int labelGroup = -1;
 			for (int i = matches.nextSetBit(0); i >= 0; i = matches.nextSetBit(i + 1))
 			{
 				GroupStyle style = styles[i];
@@ -122,16 +126,18 @@ class CustomEntityHighlightOverlay extends Overlay
 				}
 
 				renderObject(graphics, object, style);
-				if (nameStyle == null && style.group.isShowNames())
+				if (labelGroup == -1 && style.group.isShowNames())
 				{
-					nameStyle = style;
+					labelGroup = i;
 				}
 			}
 
-			if (nameStyle != null)
+			if (labelGroup != -1)
 			{
-				String name = label(nameStyle, comp.getName(), comp.getActions());
-				renderName(graphics, object.getCanvasTextLocation(graphics, name, 0), name, nameStyle.color);
+				GroupStyle labelStyle = styles[labelGroup];
+				String matched = labelStyle.labelSource == LabelSource.MATCH ? plugin.getMatchedEntry(labelGroup, comp) : null;
+				String name = label(labelStyle, comp.getName(), matched);
+				renderName(graphics, object.getCanvasTextLocation(graphics, name, 0), name, labelStyle.color);
 			}
 		}
 
@@ -256,20 +262,14 @@ class CustomEntityHighlightOverlay extends Overlay
 	/**
 	 * Returns the text to draw above an entity, falling back to its name when the chosen text is missing.
 	 */
-	private static String label(GroupStyle style, String name, String[] actions)
+	private static String label(GroupStyle style, String name, String matchedEntry)
 	{
 		switch (style.labelSource)
 		{
-			case TOP_OPTION:
-				if (actions != null)
+			case MATCH:
+				if (matchedEntry != null)
 				{
-					for (String action : actions)
-					{
-						if (!Strings.isNullOrEmpty(action))
-						{
-							return Text.removeTags(action);
-						}
-					}
+					return matchedEntry;
 				}
 				break;
 			case CUSTOM:

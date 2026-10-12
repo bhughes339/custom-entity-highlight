@@ -119,6 +119,10 @@ public class CustomEntityHighlightPlugin extends Plugin
 	private final Map<Integer, BitSet> npcMatches = new HashMap<>();
 	private final Map<Integer, BitSet> objectMatches = new HashMap<>();
 
+	// Group index and definition id -> the entry that group matched on, for Match labels
+	private final Map<Long, String> npcMatchedEntries = new HashMap<>();
+	private final Map<Long, String> objectMatchedEntries = new HashMap<>();
+
 	@Provides
 	CustomEntityHighlightConfig provideConfig(ConfigManager configManager)
 	{
@@ -155,6 +159,8 @@ public class CustomEntityHighlightPlugin extends Plugin
 			objects.clear();
 			npcMatches.clear();
 			objectMatches.clear();
+			npcMatchedEntries.clear();
+			objectMatchedEntries.clear();
 			groups = Collections.emptyList();
 			matchers = Collections.emptyList();
 		});
@@ -317,6 +323,29 @@ public class CustomEntityHighlightPlugin extends Plugin
 		return nullIfEmpty(objectMatches(current.getId()));
 	}
 
+	/**
+	 * Returns the entry, as written, that the group matched the NPC's current form on, or null if it doesn't match.
+	 */
+	String getMatchedEntry(int group, NPCComposition current)
+	{
+		return npcMatchedEntries.computeIfAbsent(matchKey(group, current.getId()),
+			k -> matchers.get(group).matchedEntry(current.getName(), current.getActions()));
+	}
+
+	/**
+	 * Returns the entry, as written, that the group matched the object's current form on, or null if it doesn't match.
+	 */
+	String getMatchedEntry(int group, ObjectComposition current)
+	{
+		return objectMatchedEntries.computeIfAbsent(matchKey(group, current.getId()),
+			k -> matchers.get(group).matchedEntry(current.getName(), current.getActions()));
+	}
+
+	private static long matchKey(int group, int id)
+	{
+		return ((long) group << 32) | (id & 0xFFFFFFFFL);
+	}
+
 	private static BitSet nullIfEmpty(BitSet matches)
 	{
 		return matches.isEmpty() ? null : matches;
@@ -352,6 +381,8 @@ public class CustomEntityHighlightPlugin extends Plugin
 			matchers = loadedMatchers;
 			npcMatches.clear();
 			objectMatches.clear();
+			npcMatchedEntries.clear();
+			objectMatchedEntries.clear();
 			npcs.clear();
 			objects.clear();
 
