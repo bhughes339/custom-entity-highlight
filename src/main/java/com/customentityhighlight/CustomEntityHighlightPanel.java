@@ -2,6 +2,8 @@ package com.customentityhighlight;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -14,6 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.inject.Inject;
+import javax.swing.AbstractButton;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -45,6 +48,12 @@ import net.runelite.client.util.ColorUtil;
  */
 class CustomEntityHighlightPanel extends PluginPanel
 {
+	// Slightly lighter than the group cards, so fields and buttons stand out from them
+	private static final Color CONTROL_BACKGROUND = ColorScheme.DARK_GRAY_COLOR;
+	// RuneLite's look and feel is FlatLaf, which draws a checkbox's box from these style keys rather than its background
+	private static final String CHECKBOX_STYLE = String.format("icon.background: #%1$06x; icon.selectedBackground: #%1$06x",
+		CONTROL_BACKGROUND.getRGB() & 0xFFFFFF);
+
 	private final CustomEntityHighlightPlugin plugin;
 	private final ColorPickerManager colorPickerManager;
 	private final JPanel groupsContainer = new JPanel(new DynamicGridLayout(0, 1, 0, 8));
@@ -284,7 +293,38 @@ class CustomEntityHighlightPanel extends PluginPanel
 		actions.add(delete);
 		card.add(actions, BorderLayout.SOUTH);
 
+		lightenControls(card);
 		return card;
+	}
+
+	/**
+	 * Gives the text fields, dropdowns, spinners, buttons and checkboxes in a card the lighter control background,
+	 * including the parts inside dropdowns and spinners. Color buttons keep showing their color.
+	 */
+	private static void lightenControls(Container container)
+	{
+		for (Component component : container.getComponents())
+		{
+			if (component instanceof ColorJButton)
+			{
+				continue;
+			}
+
+			if (component instanceof JCheckBox)
+			{
+				((JCheckBox) component).putClientProperty("FlatLaf.style", CHECKBOX_STYLE);
+			}
+			else if (component instanceof JTextComponent || component instanceof JComboBox
+				|| component instanceof JSpinner || component instanceof AbstractButton)
+			{
+				component.setBackground(CONTROL_BACKGROUND);
+			}
+
+			if (component instanceof Container)
+			{
+				lightenControls((Container) component);
+			}
+		}
 	}
 
 	private void moveGroup(int from, int to)
