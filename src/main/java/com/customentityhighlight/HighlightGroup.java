@@ -23,6 +23,8 @@ class HighlightGroup
 	private String entityNames = "";
 	private boolean highlightNpcs = true;
 	private boolean highlightObjects = true;
+	// Moves the option matched by the first matching menuOptions entry to left-click
+	private boolean swapLeftClick = false;
 	private HighlightStyle style = HighlightStyle.OUTLINE;
 	private int highlightColor = Color.CYAN.getRGB();
 	private int fillColor = new Color(0, 255, 255, 20).getRGB();

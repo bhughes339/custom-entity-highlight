@@ -9,6 +9,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -24,6 +25,9 @@ import net.runelite.api.Actor;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
+import net.runelite.api.Menu;
+import net.runelite.api.MenuAction;
+import net.runelite.api.MenuEntry;
 import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.ObjectComposition;
@@ -41,6 +45,7 @@ import net.runelite.api.events.GroundObjectSpawned;
 import net.runelite.api.events.NpcChanged;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.events.PostMenuSort;
 import net.runelite.api.events.WallObjectDespawned;
 import net.runelite.api.events.WallObjectSpawned;
 import net.runelite.client.callback.ClientThread;
@@ -63,6 +68,14 @@ import net.runelite.client.util.ImageUtil;
 )
 public class CustomEntityHighlightPlugin extends Plugin
 {
+	// Menu entries for an NPC's or object's own options, which left-click swaps can move
+	private static final Set<MenuAction> NPC_OPTIONS = EnumSet.of(MenuAction.NPC_FIRST_OPTION,
+		MenuAction.NPC_SECOND_OPTION, MenuAction.NPC_THIRD_OPTION, MenuAction.NPC_FOURTH_OPTION,
+		MenuAction.NPC_FIFTH_OPTION);
+	private static final Set<MenuAction> OBJECT_OPTIONS = EnumSet.of(MenuAction.GAME_OBJECT_FIRST_OPTION,
+		MenuAction.GAME_OBJECT_SECOND_OPTION, MenuAction.GAME_OBJECT_THIRD_OPTION,
+		MenuAction.GAME_OBJECT_FOURTH_OPTION, MenuAction.GAME_OBJECT_FIFTH_OPTION);
+
 	private static final Type GROUP_LIST_TYPE = new TypeToken<List<HighlightGroup>>()
 	{
 	}.getType();
@@ -204,6 +217,99 @@ public class CustomEntityHighlightPlugin extends Plugin
 				npcs.clear();
 				break;
 		}
+	}
+
+	/**
+	 * Moves the option chosen by a left-click swapping group to the top of the menu, for the entity the
+	 * left-click option belongs to.
+	 */
+	@Subscribe
+	public void onPostMenuSort(PostMenuSort event)
+	{
+		if (client.isMenuOpen() || matchers.isEmpty())
+		{
+			return;
+		}
+
+		Menu menu = client.getMenu();
+		MenuEntry[] entries = menu.getMenuEntries();
+		if (entries.length < 2)
+		{
+			return;
+		}
+
+		MenuEntry top = entries[entries.length - 1];
+		boolean isNpc = NPC_OPTIONS.contains(top.getType());
+		if (!isNpc && !OBJECT_OPTIONS.contains(top.getType()))
+		{
+			return;
+		}
+
+		BitSet matches;
+		if (isNpc)
+		{
+			NPCComposition comp = top.getNpc() != null ? top.getNpc().getTransformedComposition() : null;
+			matches = comp != null ? getMatchingGroups(comp) : null;
+		}
+		else
+		{
+			ObjectComposition comp = getCurrentComposition(top.getIdentifier());
+			matches = comp != null ? getMatchingGroups(comp) : null;
+		}
+		if (matches == null)
+		{
+			return;
+		}
+
+		// The same entity's options, top first; others are left null so they can't be chosen.
+		// Deprioritized options, such as Attack under the game's attack option setting, are never promoted.
+		String[] options = new String[entries.length];
+		for (int i = 0; i < entries.length; i++)
+		{
+			MenuEntry entry = entries[entries.length - 1 - i];
+			if (!entry.isDeprioritized() && isSameEntity(entry, top, isNpc))
+			{
+				options[i] = entry.getOption();
+			}
+		}
+
+		for (int g = matches.nextSetBit(0); g >= 0; g = matches.nextSetBit(g + 1))
+		{
+			HighlightGroup group = groups.get(g);
+			if (!group.isEnabled() || !group.isSwapLeftClick()
+				|| !(isNpc ? group.isHighlightNpcs() : group.isHighlightObjects()))
+			{
+				continue;
+			}
+
+			int option = matchers.get(g).firstMatchingOption(options);
+			if (option >= 0)
+			{
+				if (option > 0)
+				{
+					int index = entries.length - 1 - option;
+					MenuEntry chosen = entries[index];
+					System.arraycopy(entries, index + 1, entries, index, entries.length - 1 - index);
+					entries[entries.length - 1] = chosen;
+					menu.setMenuEntries(entries);
+				}
+				return;
+			}
+		}
+	}
+
+	private static boolean isSameEntity(MenuEntry entry, MenuEntry top, boolean isNpc)
+	{
+		if (isNpc)
+		{
+			return NPC_OPTIONS.contains(entry.getType()) && entry.getNpc() == top.getNpc();
+		}
+
+		return OBJECT_OPTIONS.contains(entry.getType())
+			&& entry.getIdentifier() == top.getIdentifier()
+			&& entry.getParam0() == top.getParam0()
+			&& entry.getParam1() == top.getParam1()
+			&& entry.getWorldViewId() == top.getWorldViewId();
 	}
 
 	@Subscribe
@@ -356,7 +462,12 @@ public class CustomEntityHighlightPlugin extends Plugin
 	 */
 	ObjectComposition getCurrentComposition(TileObject object)
 	{
-		ObjectComposition comp = client.getObjectDefinition(object.getId());
+		return getCurrentComposition(object.getId());
+	}
+
+	private ObjectComposition getCurrentComposition(int id)
+	{
+		ObjectComposition comp = client.getObjectDefinition(id);
 		if (comp != null && comp.getImpostorIds() != null)
 		{
 			comp = comp.getImpostor();

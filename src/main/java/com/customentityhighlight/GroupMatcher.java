@@ -153,6 +153,25 @@ class GroupMatcher
 		return entry != null ? entry : matchingName(name);
 	}
 
+	/**
+	 * Returns the index of the option matched by the first option entry that matches any of them, or -1 if none
+	 * match. Null options are skipped, and when one entry matches several options the earliest wins.
+	 */
+	int firstMatchingOption(String[] options)
+	{
+		for (Pattern pattern : optionPatterns.values())
+		{
+			for (int i = 0; i < options.length; i++)
+			{
+				if (options[i] != null && pattern.matcher(Text.removeTags(options[i])).matches())
+				{
+					return i;
+				}
+			}
+		}
+		return -1;
+	}
+
 	private String matchingOption(String[] actions)
 	{
 		if (optionPatterns.isEmpty() || actions == null)

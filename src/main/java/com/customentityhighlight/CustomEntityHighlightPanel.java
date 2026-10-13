@@ -150,6 +150,11 @@ class CustomEntityHighlightPanel extends PluginPanel
 		targets.add(checkBox("Objects", group.isHighlightObjects(), group::setHighlightObjects), BorderLayout.CENTER);
 		addRow(body, row++, "Highlight", targets);
 
+		JCheckBox swap = checkBox("Swap left-click", group.isSwapLeftClick(), group::setSwapLeftClick);
+		swap.setToolTipText("<html>Make the option matched by the first matching Options entry the left-click "
+			+ "option<br>for matched NPCs and objects. Names entries aren't used.</html>");
+		addRow(body, row++, "", swap);
+
 		JComboBox<HighlightStyle> style = new JComboBox<>(HighlightStyle.values());
 		style.setSelectedItem(group.getStyleOrDefault());
 		style.setToolTipText("<html>Outline: traces the model<br>Hull: border around the model<br>"

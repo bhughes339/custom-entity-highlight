@@ -83,6 +83,16 @@ public class GroupMatcherTest
 	}
 
 	@Test
+	public void findsFirstMatchingOption()
+	{
+		// Entries are tried in the order written; for each, the earliest matching option wins
+		String[] options = {"Talk-to", null, "Bank", "Bank-all", "Collect"};
+		assertEquals(4, matcher("coll*, bank*", "").firstMatchingOption(options));
+		assertEquals(2, matcher("pickpocket, bank*", "").firstMatchingOption(options));
+		assertEquals(-1, matcher("steal", "banker").firstMatchingOption(options));
+	}
+
+	@Test
 	public void ignoresInvalidRegexes()
 	{
 		GroupMatcher matcher = matcher("", "/bank(/, banker");
