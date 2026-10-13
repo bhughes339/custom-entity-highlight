@@ -26,6 +26,7 @@ public class HighlightGroupTest
 		group.setName("Thieving");
 		group.setCollapsed(true);
 		group.setSwapLeftClick(true);
+		group.setAdvancedExpanded(true);
 		group.setMenuOptions("pick*, steal-from");
 		group.setStyle(HighlightStyle.CLICKBOX);
 		group.setHighlightColor(new Color(255, 128, 0, 200).getRGB());
@@ -48,6 +49,7 @@ public class HighlightGroupTest
 		assertTrue(group.isEnabled());
 		assertFalse(group.isCollapsed());
 		assertFalse(group.isSwapLeftClick());
+		assertFalse(group.isAdvancedExpanded());
 		assertTrue(group.isHighlightNpcs());
 		assertEquals(HighlightStyle.OUTLINE, group.getStyleOrDefault());
 		assertEquals(2, group.getBorderWidth());

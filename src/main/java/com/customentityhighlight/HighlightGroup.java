@@ -18,6 +18,8 @@ class HighlightGroup
 	private boolean enabled = true;
 	// Whether the panel hides this group's settings
 	private boolean collapsed = false;
+	// Whether the panel shows this group's advanced settings
+	private boolean advancedExpanded = false;
 	// Comma-separated lists; an entity matches if any entry in any list matches
 	private String menuOptions = "";
 	private String entityNames = "";

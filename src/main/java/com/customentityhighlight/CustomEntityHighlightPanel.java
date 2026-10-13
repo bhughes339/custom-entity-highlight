@@ -9,6 +9,8 @@ import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.inject.Inject;
@@ -150,11 +152,6 @@ class CustomEntityHighlightPanel extends PluginPanel
 		targets.add(checkBox("Objects", group.isHighlightObjects(), group::setHighlightObjects), BorderLayout.CENTER);
 		addRow(body, row++, "Highlight", targets);
 
-		JCheckBox swap = checkBox("Swap left-click", group.isSwapLeftClick(), group::setSwapLeftClick);
-		swap.setToolTipText("<html>Make the option matched by the first matching Options entry the left-click "
-			+ "option<br>for matched NPCs and objects. Names entries aren't used.</html>");
-		addRow(body, row++, "", swap);
-
 		JComboBox<HighlightStyle> style = new JComboBox<>(HighlightStyle.values());
 		style.setSelectedItem(group.getStyleOrDefault());
 		style.setToolTipText("<html>Outline: traces the model<br>Hull: border around the model<br>"
@@ -172,12 +169,32 @@ class CustomEntityHighlightPanel extends PluginPanel
 		addRow(body, row++, "Fill", colorButton("Fill color", group.getFillColorValue(),
 			color -> group.setFillColor(color.getRGB())));
 
-		addRow(body, row++, "Width", spinner(group.getBorderWidth(), HighlightGroup.MIN_BORDER_WIDTH,
-			HighlightGroup.MAX_BORDER_WIDTH, group::setBorderWidth));
-		addRow(body, row++, "Feather", spinner(group.getOutlineFeather(), 0,
-			HighlightGroup.MAX_OUTLINE_FEATHER, group::setOutlineFeather));
+		// Advanced: rows hidden until expanded; they stay in the same grid so their labels line up
+		JPanel advancedHeader = new JPanel(new BorderLayout(4, 0));
+		advancedHeader.setOpaque(false);
+		advancedHeader.setBorder(new EmptyBorder(4, 0, 0, 0));
+		JLabel advancedTitle = new JLabel("Advanced");
+		advancedTitle.setFont(FontManager.getRunescapeSmallFont());
+		advancedHeader.add(advancedTitle, BorderLayout.WEST);
+		JButton advancedToggle = new JButton();
+		advancedToggle.setFocusPainted(false);
+		advancedToggle.setMargin(new Insets(0, 4, 0, 4));
+		advancedHeader.add(advancedToggle, BorderLayout.EAST);
+		addWideRow(body, row++, advancedHeader);
 
-		addRow(body, row++, "", checkBox("Show labels", group.isShowNames(), group::setShowNames));
+		List<JComponent> advanced = new ArrayList<>();
+
+		advanced.addAll(addRow(body, row++, "Width", spinner(group.getBorderWidth(), HighlightGroup.MIN_BORDER_WIDTH,
+			HighlightGroup.MAX_BORDER_WIDTH, group::setBorderWidth)));
+		advanced.addAll(addRow(body, row++, "Feather", spinner(group.getOutlineFeather(), 0,
+			HighlightGroup.MAX_OUTLINE_FEATHER, group::setOutlineFeather)));
+
+		JCheckBox swap = checkBox("Swap left-click", group.isSwapLeftClick(), group::setSwapLeftClick);
+		swap.setToolTipText("<html>Make the option matched by the first matching Options entry the left-click "
+			+ "option<br>for matched NPCs and objects. Names entries aren't used.</html>");
+		advanced.addAll(addRow(body, row++, "", swap));
+
+		advanced.addAll(addRow(body, row++, "", checkBox("Show labels", group.isShowNames(), group::setShowNames)));
 
 		JTextField customLabel = new JTextField(group.getCustomLabel());
 		customLabel.setToolTipText("Text shown when Label is Custom. Leave blank to show the entity's name.");
@@ -195,9 +212,28 @@ class CustomEntityHighlightPanel extends PluginPanel
 			customLabel.setEnabled(selected == LabelSource.CUSTOM);
 			save();
 		});
-		addRow(body, row++, "Label", labelSource);
-		addRow(body, row, "Text", customLabel);
+		advanced.addAll(addRow(body, row++, "Label", labelSource));
+		advanced.addAll(addRow(body, row, "Text", customLabel));
 		card.add(body, BorderLayout.CENTER);
+
+		Runnable showAdvanced = () ->
+		{
+			for (JComponent component : advanced)
+			{
+				component.setVisible(group.isAdvancedExpanded());
+			}
+			advancedToggle.setText(group.isAdvancedExpanded() ? "-" : "+");
+			advancedToggle.setToolTipText(group.isAdvancedExpanded() ? "Hide advanced settings" : "Show advanced settings");
+		};
+		showAdvanced.run();
+		advancedToggle.addActionListener(e ->
+		{
+			group.setAdvancedExpanded(!group.isAdvancedExpanded());
+			showAdvanced.run();
+			groupsContainer.revalidate();
+			groupsContainer.repaint();
+			save();
+		});
 
 		JButton collapse = new JButton();
 		collapse.setFocusPainted(false);
@@ -258,7 +294,10 @@ class CustomEntityHighlightPanel extends PluginPanel
 		rebuild();
 	}
 
-	private static void addRow(JPanel body, int row, String label, JComponent component)
+	/**
+	 * Adds a labelled row and returns its label and component, e.g. to hide them together.
+	 */
+	private static List<JComponent> addRow(JPanel body, int row, String label, JComponent component)
 	{
 		GridBagConstraints c = new GridBagConstraints();
 		c.gridy = row;
@@ -273,6 +312,22 @@ class CustomEntityHighlightPanel extends PluginPanel
 
 		c.gridx = 1;
 		c.ipadx = 0;
+		c.weightx = 1;
+		c.fill = GridBagConstraints.HORIZONTAL;
+		body.add(component, c);
+		return Arrays.asList(jLabel, component);
+	}
+
+	/**
+	 * Adds a row whose component spans both the label and component columns.
+	 */
+	private static void addWideRow(JPanel body, int row, JComponent component)
+	{
+		GridBagConstraints c = new GridBagConstraints();
+		c.gridy = row;
+		c.gridx = 0;
+		c.gridwidth = 2;
+		c.insets = new Insets(2, 0, 2, 0);
 		c.weightx = 1;
 		c.fill = GridBagConstraints.HORIZONTAL;
 		body.add(component, c);
