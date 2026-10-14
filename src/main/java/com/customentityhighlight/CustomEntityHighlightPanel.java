@@ -1,6 +1,7 @@
 package com.customentityhighlight;
 
 import com.google.gson.Gson;
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -20,6 +21,8 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.awt.geom.Line2D;
+import java.awt.geom.Path2D;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -184,7 +187,7 @@ class CustomEntityHighlightPanel extends PluginPanel
 		card.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		card.setBorder(new EmptyBorder(8, 8, 8, 8));
 
-		// Header: enabled toggle, name and collapse toggle
+		// Header: enabled toggle, name, rename button and collapse toggle
 		JPanel header = new JPanel(new BorderLayout(4, 0));
 		header.setOpaque(false);
 
@@ -192,10 +195,34 @@ class CustomEntityHighlightPanel extends PluginPanel
 		enabled.setToolTipText("Enable or disable this group");
 		header.add(enabled, BorderLayout.WEST);
 
-		JTextField name = new JTextField(group.getName());
-		name.setToolTipText("Group name");
-		onCommit(name, text -> group.setName(text.trim()));
+		// Long names are cut off with "...", so the tooltip shows the whole name
+		JLabel name = new JLabel(group.getName());
+		name.setForeground(Color.WHITE);
+		name.setToolTipText(group.getName());
 		header.add(name, BorderLayout.CENTER);
+
+		JButton rename = new JButton(new PencilIcon());
+		rename.setFocusPainted(false);
+		rename.setToolTipText("Rename this group");
+		rename.addActionListener(e ->
+		{
+			Object input = JOptionPane.showInputDialog(this, "Group name:", "Rename group",
+				JOptionPane.PLAIN_MESSAGE, null, null, group.getName());
+			// Null when cancelled; a blank name keeps the old one
+			String newName = input != null ? input.toString().trim() : "";
+			if (!newName.isEmpty())
+			{
+				group.setName(newName);
+				name.setText(newName);
+				name.setToolTipText(newName);
+				save();
+			}
+		});
+
+		JPanel headerButtons = new JPanel(new GridLayout(1, 2, 4, 0));
+		headerButtons.setOpaque(false);
+		headerButtons.add(rename);
+		header.add(headerButtons, BorderLayout.EAST);
 		card.add(header, BorderLayout.NORTH);
 
 		// Body: matching and appearance settings
@@ -323,7 +350,7 @@ class CustomEntityHighlightPanel extends PluginPanel
 			groupsContainer.repaint();
 			save();
 		});
-		header.add(collapse, BorderLayout.EAST);
+		headerButtons.add(collapse);
 
 		// Footer: reorder, export and delete
 		JPanel actions = new JPanel(new BorderLayout(4, 0));
@@ -578,6 +605,48 @@ class CustomEntityHighlightPanel extends PluginPanel
 		button.setFocusPainted(false);
 		button.setToolTipText(tooltip);
 		return button;
+	}
+
+	/**
+	 * A small pencil, drawn in the button's text color.
+	 */
+	private static class PencilIcon implements Icon
+	{
+		private static final int SIZE = 11;
+
+		@Override
+		public void paintIcon(Component c, Graphics g, int x, int y)
+		{
+			Graphics2D g2 = (Graphics2D) g.create();
+			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g2.setColor(c.isEnabled() ? c.getForeground() : ColorScheme.MEDIUM_GRAY_COLOR);
+			g2.translate(x, y);
+
+			// Body, running from the bottom-left tip up to the top-right end
+			g2.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
+			g2.draw(new Line2D.Float(3.5f, 7.5f, 9.5f, 1.5f));
+
+			// Tip
+			Path2D.Float tip = new Path2D.Float();
+			tip.moveTo(0.5f, 10.5f);
+			tip.lineTo(1.8f, 6.4f);
+			tip.lineTo(4.6f, 9.2f);
+			tip.closePath();
+			g2.fill(tip);
+			g2.dispose();
+		}
+
+		@Override
+		public int getIconWidth()
+		{
+			return SIZE;
+		}
+
+		@Override
+		public int getIconHeight()
+		{
+			return SIZE;
+		}
 	}
 
 	/**
