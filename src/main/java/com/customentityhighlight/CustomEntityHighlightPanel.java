@@ -61,6 +61,8 @@ class CustomEntityHighlightPanel extends PluginPanel
 {
 	// Slightly lighter than the group cards, so fields and buttons stand out from them
 	private static final Color CONTROL_BACKGROUND = ColorScheme.DARK_GRAY_COLOR;
+	// A darker shade of RuneLite's error red, so white text on it stays readable
+	private static final Color DELETE_BACKGROUND = ColorScheme.PROGRESS_ERROR_COLOR.darker();
 	// RuneLite's look and feel is FlatLaf, which draws a checkbox's box from these style keys rather than its background
 	private static final String CHECKBOX_STYLE = String.format("icon.background: #%1$06x; icon.selectedBackground: #%1$06x",
 		CONTROL_BACKGROUND.getRGB() & 0xFFFFFF);
@@ -365,6 +367,9 @@ class CustomEntityHighlightPanel extends PluginPanel
 		card.add(actions, BorderLayout.SOUTH);
 
 		lightenControls(card);
+		// After lightening, which would otherwise replace the red
+		delete.setBackground(DELETE_BACKGROUND);
+		delete.setForeground(Color.WHITE);
 		return card;
 	}
 
