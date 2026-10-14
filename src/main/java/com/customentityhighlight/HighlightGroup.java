@@ -1,6 +1,10 @@
 package com.customentityhighlight;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import java.awt.Color;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import lombok.Data;
 
 /**
@@ -51,6 +55,36 @@ class HighlightGroup
 	{
 		// Null if the saved style no longer exists
 		return style != null ? style : HighlightStyle.OUTLINE;
+	}
+
+	/**
+	 * Encodes the group as Base64 JSON, for sharing as text.
+	 */
+	String toExportString(Gson gson)
+	{
+		return Base64.getEncoder().encodeToString(gson.toJson(this).getBytes(StandardCharsets.UTF_8));
+	}
+
+	/**
+	 * Decodes a group from {@link #toExportString}. Whitespace is ignored. Returns null if the text isn't a group.
+	 */
+	static HighlightGroup fromExportString(Gson gson, String text)
+	{
+		if (text == null)
+		{
+			return null;
+		}
+
+		try
+		{
+			byte[] json = Base64.getDecoder().decode(text.replaceAll("\\s", ""));
+			return gson.fromJson(new String(json, StandardCharsets.UTF_8), HighlightGroup.class);
+		}
+		catch (IllegalArgumentException | JsonParseException e)
+		{
+			// Not Base64, or not a group's JSON
+			return null;
+		}
 	}
 
 	LabelSource getLabelSourceOrDefault()

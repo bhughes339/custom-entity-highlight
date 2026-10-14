@@ -1,22 +1,33 @@
 package com.customentityhighlight;
 
+import com.google.gson.Gson;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
+import java.awt.Polygon;
+import java.awt.RenderingHints;
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.inject.Inject;
 import javax.swing.AbstractButton;
+import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -56,15 +67,17 @@ class CustomEntityHighlightPanel extends PluginPanel
 
 	private final CustomEntityHighlightPlugin plugin;
 	private final ColorPickerManager colorPickerManager;
+	private final Gson gson;
 	private final JPanel groupsContainer = new JPanel(new DynamicGridLayout(0, 1, 0, 8));
 
 	private List<HighlightGroup> groups;
 
 	@Inject
-	private CustomEntityHighlightPanel(CustomEntityHighlightPlugin plugin, ColorPickerManager colorPickerManager)
+	private CustomEntityHighlightPanel(CustomEntityHighlightPlugin plugin, ColorPickerManager colorPickerManager, Gson gson)
 	{
 		this.plugin = plugin;
 		this.colorPickerManager = colorPickerManager;
+		this.gson = gson;
 
 		setLayout(new BorderLayout(0, 8));
 		setBorder(new EmptyBorder(10, 10, 10, 10));
@@ -89,7 +102,16 @@ class CustomEntityHighlightPanel extends PluginPanel
 			save();
 			rebuild();
 		});
-		header.add(addButton, BorderLayout.SOUTH);
+
+		JButton importButton = new JButton("Import group");
+		importButton.setFocusPainted(false);
+		importButton.setToolTipText("Add a group copied with a group's Export button");
+		importButton.addActionListener(e -> importGroup());
+
+		JPanel headerButtons = new JPanel(new GridLayout(1, 2, 4, 0));
+		headerButtons.add(addButton);
+		headerButtons.add(importButton);
+		header.add(headerButtons, BorderLayout.SOUTH);
 
 		add(header, BorderLayout.NORTH);
 		add(groupsContainer, BorderLayout.CENTER);
@@ -115,6 +137,43 @@ class CustomEntityHighlightPanel extends PluginPanel
 	private void save()
 	{
 		plugin.saveGroups(groups);
+	}
+
+	/**
+	 * Adds the group on the clipboard, if it holds one exported by {@link #exportGroup}.
+	 */
+	private void importGroup()
+	{
+		String text;
+		try
+		{
+			text = (String) Toolkit.getDefaultToolkit().getSystemClipboard().getData(DataFlavor.stringFlavor);
+		}
+		catch (UnsupportedFlavorException | IOException | IllegalStateException e)
+		{
+			text = null;
+		}
+
+		HighlightGroup group = HighlightGroup.fromExportString(gson, text);
+		if (group == null)
+		{
+			JOptionPane.showMessageDialog(this, "The clipboard doesn't contain an exported highlight group.",
+				"Import group", JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+
+		// Show the imported group's settings, however it was left when exported
+		group.setCollapsed(false);
+		groups.add(group);
+		save();
+		rebuild();
+	}
+
+	private void exportGroup(HighlightGroup group)
+	{
+		Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(group.toExportString(gson)), null);
+		JOptionPane.showMessageDialog(this, "Copied the group \"" + group.getName() + "\" to the clipboard. "
+			+ "Use Import group to add it.", "Export group", JOptionPane.INFORMATION_MESSAGE);
 	}
 
 	private JPanel createGroupPanel(HighlightGroup group, int index)
@@ -264,19 +323,30 @@ class CustomEntityHighlightPanel extends PluginPanel
 		});
 		header.add(collapse, BorderLayout.EAST);
 
-		// Footer: reorder and delete
-		JPanel actions = new JPanel(new GridLayout(1, 3, 4, 0));
+		// Footer: reorder, export and delete
+		JPanel actions = new JPanel(new BorderLayout(4, 0));
 		actions.setOpaque(false);
 
-		JButton up = actionButton("Up", "Move up; later groups draw on top");
+		JPanel arrows = new JPanel(new GridLayout(1, 2, 4, 0));
+		arrows.setOpaque(false);
+
+		JButton up = arrowButton(true, "Move up; later groups draw on top");
 		up.setEnabled(index > 0);
 		up.addActionListener(e -> moveGroup(index, index - 1));
-		actions.add(up);
+		arrows.add(up);
 
-		JButton down = actionButton("Down", "Move down; later groups draw on top");
+		JButton down = arrowButton(false, "Move down; later groups draw on top");
 		down.setEnabled(index < groups.size() - 1);
 		down.addActionListener(e -> moveGroup(index, index + 1));
-		actions.add(down);
+		arrows.add(down);
+		actions.add(arrows, BorderLayout.WEST);
+
+		JPanel groupActions = new JPanel(new GridLayout(1, 2, 4, 0));
+		groupActions.setOpaque(false);
+
+		JButton export = actionButton("Export", "Copy this group to the clipboard, to share or import later");
+		export.addActionListener(e -> exportGroup(group));
+		groupActions.add(export);
 
 		JButton delete = actionButton("Delete", "Delete this group");
 		delete.addActionListener(e ->
@@ -290,7 +360,8 @@ class CustomEntityHighlightPanel extends PluginPanel
 				rebuild();
 			}
 		});
-		actions.add(delete);
+		groupActions.add(delete);
+		actions.add(groupActions, BorderLayout.CENTER);
 		card.add(actions, BorderLayout.SOUTH);
 
 		lightenControls(card);
@@ -494,5 +565,53 @@ class CustomEntityHighlightPanel extends PluginPanel
 		button.setFont(FontManager.getRunescapeSmallFont());
 		button.setToolTipText(tooltip);
 		return button;
+	}
+
+	private static JButton arrowButton(boolean up, String tooltip)
+	{
+		JButton button = new JButton(new ArrowIcon(up));
+		button.setFocusPainted(false);
+		button.setToolTipText(tooltip);
+		return button;
+	}
+
+	/**
+	 * A small triangle pointing up or down, drawn in the button's text color. The RuneScape font has no arrow glyphs.
+	 */
+	private static class ArrowIcon implements Icon
+	{
+		private static final int WIDTH = 9;
+		private static final int HEIGHT = 5;
+
+		private final boolean up;
+
+		private ArrowIcon(boolean up)
+		{
+			this.up = up;
+		}
+
+		@Override
+		public void paintIcon(Component c, Graphics g, int x, int y)
+		{
+			Graphics2D g2 = (Graphics2D) g.create();
+			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g2.setColor(c.isEnabled() ? c.getForeground() : ColorScheme.MEDIUM_GRAY_COLOR);
+			int tipY = up ? y : y + HEIGHT;
+			int baseY = up ? y + HEIGHT : y;
+			g2.fill(new Polygon(new int[]{x, x + WIDTH / 2, x + WIDTH}, new int[]{baseY, tipY, baseY}, 3));
+			g2.dispose();
+		}
+
+		@Override
+		public int getIconWidth()
+		{
+			return WIDTH;
+		}
+
+		@Override
+		public int getIconHeight()
+		{
+			return HEIGHT;
+		}
 	}
 }
