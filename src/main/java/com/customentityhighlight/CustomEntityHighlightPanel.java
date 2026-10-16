@@ -12,7 +12,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.awt.KeyboardFocusManager;
 import java.awt.Polygon;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
@@ -478,7 +477,6 @@ class CustomEntityHighlightPanel extends PluginPanel
 
 	/**
 	 * A three-row text area for a list of entries, where Enter starts a new line.
-	 * Tab still moves to the next field instead of typing a tab.
 	 */
 	private static JTextArea entryList(String text)
 	{
@@ -486,8 +484,6 @@ class CustomEntityHighlightPanel extends PluginPanel
 		JTextArea area = new JTextArea(text, 3, 1);
 		area.setLineWrap(true);
 		area.setWrapStyleWord(true);
-		area.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, null);
-		area.setFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, null);
 		return area;
 	}
 
