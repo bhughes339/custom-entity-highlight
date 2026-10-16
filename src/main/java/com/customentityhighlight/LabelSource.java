@@ -1,6 +1,5 @@
 package com.customentityhighlight;
 
-import com.google.gson.annotations.SerializedName;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -12,8 +11,6 @@ import lombok.RequiredArgsConstructor;
 public enum LabelSource
 {
 	NAME("Name"),
-	// Replaced the old "Top option" source, so groups saved with it load as Match
-	@SerializedName(value = "MATCH", alternate = "TOP_OPTION")
 	MATCH("Match"),
 	CUSTOM("Custom");
 

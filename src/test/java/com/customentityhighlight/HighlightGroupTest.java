@@ -93,14 +93,6 @@ public class HighlightGroupTest
 	}
 
 	@Test
-	public void topOptionLabelsLoadAsMatch()
-	{
-		List<HighlightGroup> loaded = gson.fromJson("[{\"labelSource\":\"TOP_OPTION\"}]", GROUP_LIST_TYPE);
-
-		assertEquals(LabelSource.MATCH, loaded.get(0).getLabelSourceOrDefault());
-	}
-
-	@Test
 	public void unknownStyleFallsBackToOutline()
 	{
 		List<HighlightGroup> loaded = gson.fromJson("[{\"style\":\"NOT_A_STYLE\"}]", GROUP_LIST_TYPE);
