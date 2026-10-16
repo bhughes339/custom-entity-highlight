@@ -18,6 +18,7 @@ Settings marked *Advanced* are in the group's **Advanced** section, which is clo
 | Style | Outline (traces the model), Hull (border around the model), Area (model filled in, no border), Clickbox (exact clickable area), Tile (tiles it stands on) or None (no highlight, only the label if Show labels is on). |
 | Color / Fill | Border and fill colors, including transparency. The border color is also used for labels. |
 | Width / Feather | *Advanced.* Line thickness, and edge softness for the outline style. |
+| Interactable only | *Advanced.* Skips NPCs and objects you can't interact with: ones with no right-click option besides Examine, such as decorative bank booths, and NPCs the game doesn't let you click. Objects that change form are highlighted only while their current form is interactable. |
 | Swap left-click | *Advanced.* Makes the option matched by the group's first matching Options entry the left-click option for matched NPCs and objects. Names entries aren't used. Options the game has moved down the menu, such as Attack under your NPC attack option setting, are never moved to left-click. |
 | Show labels | *Advanced.* Draws text above each highlight. |
 | Label / Text | *Advanced.* What Show labels draws: the NPC or object **Name**, the **Match** (the first Options entry that matched, as you wrote it, or else the first Names entry), or **Custom** text typed in the Text field. Falls back to the name if the custom text is blank. |

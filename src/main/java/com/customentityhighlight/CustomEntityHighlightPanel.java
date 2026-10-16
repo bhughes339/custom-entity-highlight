@@ -285,6 +285,11 @@ class CustomEntityHighlightPanel extends PluginPanel
 		advanced.addAll(addRow(body, row++, "Feather", spinner(group.getOutlineFeather(), 0,
 			HighlightGroup.MAX_OUTLINE_FEATHER, group::setOutlineFeather)));
 
+		JCheckBox interactable = checkBox("Interactable only", group.isInteractableOnly(), group::setInteractableOnly);
+		interactable.setToolTipText("<html>Only highlight NPCs and objects you can interact with: ones that have "
+			+ "a right-click<br>option other than Examine, e.g. skipping decorative bank booths.</html>");
+		advanced.addAll(addRow(body, row++, "", interactable));
+
 		JCheckBox swap = checkBox("Swap left-click", group.isSwapLeftClick(), group::setSwapLeftClick);
 		swap.setToolTipText("<html>Make the option matched by the first matching Options entry the left-click "
 			+ "option<br>for matched NPCs and objects. Names entries aren't used.</html>");

@@ -592,7 +592,7 @@ public class CustomEntityHighlightPlugin extends Plugin
 		return npcMatches.computeIfAbsent(id, i ->
 		{
 			NPCComposition comp = client.getNpcDefinition(i);
-			return comp != null ? matchingGroups(comp.getName(), comp.getActions()) : new BitSet();
+			return comp != null ? matchingGroups(comp.getName(), comp.getActions(), comp.isInteractible()) : new BitSet();
 		});
 	}
 
@@ -601,7 +601,8 @@ public class CustomEntityHighlightPlugin extends Plugin
 		return objectMatches.computeIfAbsent(id, i ->
 		{
 			ObjectComposition comp = client.getObjectDefinition(i);
-			return comp != null ? matchingGroups(comp.getName(), comp.getActions()) : new BitSet();
+			// Objects have no clickable flag; whether they have options decides it
+			return comp != null ? matchingGroups(comp.getName(), comp.getActions(), true) : new BitSet();
 		});
 	}
 
@@ -622,12 +623,12 @@ public class CustomEntityHighlightPlugin extends Plugin
 		return false;
 	}
 
-	private BitSet matchingGroups(String name, String[] actions)
+	private BitSet matchingGroups(String name, String[] actions, boolean clickable)
 	{
 		BitSet matches = new BitSet();
 		for (int i = 0; i < matchers.size(); i++)
 		{
-			if (matchers.get(i).matches(name, actions))
+			if (matchers.get(i).matches(name, actions, clickable))
 			{
 				matches.set(i);
 			}

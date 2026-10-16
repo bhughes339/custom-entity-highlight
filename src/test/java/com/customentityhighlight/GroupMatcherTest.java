@@ -93,6 +93,26 @@ public class GroupMatcherTest
 	}
 
 	@Test
+	public void interactableOnlySkipsEntitiesWithoutOptions()
+	{
+		HighlightGroup group = new HighlightGroup();
+		group.setEntityNames("bank booth");
+		GroupMatcher any = GroupMatcher.of(group);
+		group.setInteractableOnly(true);
+		GroupMatcher interactable = GroupMatcher.of(group);
+
+		String[] none = {null, "", "<col=ff0000></col>", null, null};
+		assertTrue(any.matches("Bank booth", none, true));
+		assertFalse(interactable.matches("Bank booth", none, true));
+		assertFalse(interactable.matches("Bank booth", null, true));
+		assertTrue(interactable.matches("Bank booth", new String[]{null, "Bank", null}, true));
+		// NPCs the game won't let you click don't count, even with options
+		assertFalse(interactable.matches("Bank booth", BANKER_ACTIONS, false));
+		// Changing the setting changes which entities match, so the plugin rescans
+		assertFalse(any.equals(interactable));
+	}
+
+	@Test
 	public void ignoresInvalidRegexes()
 	{
 		GroupMatcher matcher = matcher("", "/bank(/, banker");

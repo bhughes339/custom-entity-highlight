@@ -27,6 +27,8 @@ class GroupMatcher
 
 	List<String> options;
 	List<String> names;
+	// Whether to skip entities that can't be interacted with
+	boolean interactableOnly;
 
 	// Entry -> pattern, in entry order, compiled from the entries above so equal entries always give equal patterns
 	@EqualsAndHashCode.Exclude
@@ -40,7 +42,7 @@ class GroupMatcher
 	{
 		List<String> options = splitEntries(group.getMenuOptions());
 		List<String> names = splitEntries(group.getEntityNames());
-		return new GroupMatcher(options, names, compileAll(options), compileAll(names));
+		return new GroupMatcher(options, names, group.isInteractableOnly(), compileAll(options), compileAll(names));
 	}
 
 	/**
@@ -136,11 +138,40 @@ class GroupMatcher
 	}
 
 	/**
-	 * Whether a definition with this name and menu actions matches any of the entries.
+	 * Whether a definition with this name and menu actions matches any of the entries, ignoring interactability.
 	 */
 	boolean matches(String name, String[] actions)
 	{
 		return matchedEntry(name, actions) != null;
+	}
+
+	/**
+	 * Whether a definition matches any of the entries and, if the group is limited to interactable entities, is one.
+	 * An entity is interactable if the game lets it be clicked and it has an option other than Examine, which
+	 * definitions don't list.
+	 */
+	boolean matches(String name, String[] actions, boolean clickable)
+	{
+		if (interactableOnly && !(clickable && hasAction(actions)))
+		{
+			return false;
+		}
+		return matches(name, actions);
+	}
+
+	private static boolean hasAction(String[] actions)
+	{
+		if (actions != null)
+		{
+			for (String action : actions)
+			{
+				if (action != null && !Text.removeTags(action).trim().isEmpty())
+				{
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	/**
