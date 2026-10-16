@@ -11,7 +11,9 @@ public enum HighlightStyle
 	HULL("Hull"),
 	AREA("Area"),
 	CLICKBOX("Clickbox"),
-	TILE("Tile");
+	TILE("Tile"),
+	// Draws nothing, so the group only shows labels
+	NONE("None");
 
 	private final String name;
 

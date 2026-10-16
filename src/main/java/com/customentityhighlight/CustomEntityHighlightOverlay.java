@@ -1,5 +1,6 @@
 package com.customentityhighlight;
 
+import com.google.common.base.Strings;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -74,7 +75,8 @@ class CustomEntityHighlightOverlay extends Overlay
 				continue;
 			}
 
-			GroupStyle nameStyle = null;
+			// The first group drawn that shows labels decides the label
+			int labelGroup = -1;
 			for (int i = matches.nextSetBit(0); i >= 0; i = matches.nextSetBit(i + 1))
 			{
 				GroupStyle style = styles[i];
@@ -84,16 +86,18 @@ class CustomEntityHighlightOverlay extends Overlay
 				}
 
 				renderNpc(graphics, npc, style);
-				if (nameStyle == null && style.group.isShowNames())
+				if (labelGroup == -1 && style.group.isShowNames())
 				{
-					nameStyle = style;
+					labelGroup = i;
 				}
 			}
 
-			if (nameStyle != null)
+			if (labelGroup != -1)
 			{
-				String name = Text.removeTags(comp.getName());
-				renderName(graphics, npc.getCanvasTextLocation(graphics, name, npc.getLogicalHeight() + 40), name, nameStyle.color);
+				GroupStyle labelStyle = styles[labelGroup];
+				String matched = labelStyle.labelSource == LabelSource.MATCH ? plugin.getMatchedEntry(labelGroup, comp) : null;
+				String name = label(labelStyle, comp.getName(), matched);
+				renderName(graphics, npc.getCanvasTextLocation(graphics, name, npc.getLogicalHeight() + 40), name, labelStyle.color);
 			}
 		}
 
@@ -111,7 +115,8 @@ class CustomEntityHighlightOverlay extends Overlay
 				continue;
 			}
 
-			GroupStyle nameStyle = null;
+			// The first group drawn that shows labels decides the label
+			int labelGroup = -1;
 			for (int i = matches.nextSetBit(0); i >= 0; i = matches.nextSetBit(i + 1))
 			{
 				GroupStyle style = styles[i];
@@ -121,16 +126,18 @@ class CustomEntityHighlightOverlay extends Overlay
 				}
 
 				renderObject(graphics, object, style);
-				if (nameStyle == null && style.group.isShowNames())
+				if (labelGroup == -1 && style.group.isShowNames())
 				{
-					nameStyle = style;
+					labelGroup = i;
 				}
 			}
 
-			if (nameStyle != null)
+			if (labelGroup != -1)
 			{
-				String name = Text.removeTags(comp.getName());
-				renderName(graphics, object.getCanvasTextLocation(graphics, name, 0), name, nameStyle.color);
+				GroupStyle labelStyle = styles[labelGroup];
+				String matched = labelStyle.labelSource == LabelSource.MATCH ? plugin.getMatchedEntry(labelGroup, comp) : null;
+				String name = label(labelStyle, comp.getName(), matched);
+				renderName(graphics, object.getCanvasTextLocation(graphics, name, 0), name, labelStyle.color);
 			}
 		}
 
@@ -156,6 +163,9 @@ class CustomEntityHighlightOverlay extends Overlay
 			case TILE:
 				renderShape(graphics, npc.getCanvasTilePoly(), style);
 				break;
+			case NONE:
+				// Nothing to draw; the label, if any, is drawn separately
+				break;
 		}
 	}
 
@@ -177,6 +187,9 @@ class CustomEntityHighlightOverlay extends Overlay
 				break;
 			case TILE:
 				renderShape(graphics, object.getCanvasTilePoly(), style);
+				break;
+			case NONE:
+				// Nothing to draw; the label, if any, is drawn separately
 				break;
 		}
 	}
@@ -252,6 +265,29 @@ class CustomEntityHighlightOverlay extends Overlay
 		}
 	}
 
+	/**
+	 * Returns the text to draw above an entity, falling back to its name when the chosen text is missing.
+	 */
+	private static String label(GroupStyle style, String name, String matchedEntry)
+	{
+		switch (style.labelSource)
+		{
+			case MATCH:
+				if (matchedEntry != null)
+				{
+					return matchedEntry;
+				}
+				break;
+			case CUSTOM:
+				if (style.customLabel != null)
+				{
+					return style.customLabel;
+				}
+				break;
+		}
+		return Text.removeTags(name);
+	}
+
 	private static void renderName(Graphics2D graphics, Point location, String name, Color color)
 	{
 		if (location != null)
@@ -272,6 +308,9 @@ class CustomEntityHighlightOverlay extends Overlay
 		private final int width;
 		private final int feather;
 		private final BasicStroke stroke;
+		private final LabelSource labelSource;
+		// Null when the custom label is blank
+		private final String customLabel;
 
 		private GroupStyle(HighlightGroup group)
 		{
@@ -283,6 +322,8 @@ class CustomEntityHighlightOverlay extends Overlay
 			width = group.getBorderWidth();
 			feather = group.getOutlineFeather();
 			stroke = new BasicStroke(width);
+			labelSource = group.getLabelSourceOrDefault();
+			customLabel = Strings.emptyToNull(group.getCustomLabel());
 		}
 	}
 }

@@ -3,6 +3,7 @@ package com.customentityhighlight;
 import java.util.Arrays;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
@@ -62,6 +63,33 @@ public class GroupMatcherTest
 	{
 		assertEquals(Arrays.asList("/a{2,3}/", "bank", "/x,y/"), GroupMatcher.splitEntries(" /a{2,3}/ , bank,, /x,y/"));
 		assertTrue(matcher("", "/ba{1,2}nker/, chest").matches("Banker", null));
+	}
+
+	@Test
+	public void newlinesSeparateEntries()
+	{
+		assertEquals(Arrays.asList("bank", "/x,y/", "chest", "banker"),
+			GroupMatcher.splitEntries("bank\n/x,y/\r\n\nchest, banker\n"));
+	}
+
+	@Test
+	public void reportsFirstMatchedEntry()
+	{
+		// Entries are checked in the order written, options before names
+		assertEquals("coll*", matcher("talk, coll*, bank", "banker").matchedEntry("Banker", BANKER_ACTIONS));
+		assertEquals("/bank.*/", matcher("pickpocket", "chest, /bank.*/").matchedEntry("Banker", BANKER_ACTIONS));
+		assertEquals("bank", matcher("bank", "").matchedEntry("Banker", new String[]{"<col=ff0000>Bank</col>"}));
+		assertNull(matcher("steal", "chest").matchedEntry("Banker", BANKER_ACTIONS));
+	}
+
+	@Test
+	public void findsFirstMatchingOption()
+	{
+		// Entries are tried in the order written; for each, the earliest matching option wins
+		String[] options = {"Talk-to", null, "Bank", "Bank-all", "Collect"};
+		assertEquals(4, matcher("coll*, bank*", "").firstMatchingOption(options));
+		assertEquals(2, matcher("pickpocket, bank*", "").firstMatchingOption(options));
+		assertEquals(-1, matcher("steal", "banker").firstMatchingOption(options));
 	}
 
 	@Test
