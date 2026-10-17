@@ -186,17 +186,17 @@ class CustomEntityHighlightPanel extends PluginPanel
 		card.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		card.setBorder(new EmptyBorder(8, 8, 8, 8));
 
-		// Header: enabled toggle, name, rename button and collapse toggle
+		// Header: collapse toggle, name, rename button and reorder arrows
 		JPanel header = new JPanel(new BorderLayout(4, 0));
 		header.setOpaque(false);
 
-		JCheckBox enabled = checkBox(null, group.isEnabled(), group::setEnabled);
-		enabled.setToolTipText("Enable or disable this group");
-		header.add(enabled, BorderLayout.WEST);
+		JButton collapse = new JButton();
+		collapse.setFocusPainted(false);
+		header.add(collapse, BorderLayout.WEST);
 
 		// Long names are cut off with "...", so the tooltip shows the whole name
 		JLabel name = new JLabel(group.getName());
-		name.setForeground(Color.WHITE);
+		name.setForeground(group.isEnabled() ? Color.WHITE : ColorScheme.MEDIUM_GRAY_COLOR);
 		name.setToolTipText(group.getName());
 		header.add(name, BorderLayout.CENTER);
 
@@ -218,16 +218,31 @@ class CustomEntityHighlightPanel extends PluginPanel
 			}
 		});
 
-		JPanel headerButtons = new JPanel(new GridLayout(1, 2, 4, 0));
+		JButton up = arrowButton(true, "Move up; later groups draw on top");
+		up.setEnabled(index > 0);
+		up.addActionListener(e -> moveGroup(index, index - 1));
+
+		JButton down = arrowButton(false, "Move down; later groups draw on top");
+		down.setEnabled(index < groups.size() - 1);
+		down.addActionListener(e -> moveGroup(index, index + 1));
+
+		JPanel headerButtons = new JPanel(new GridLayout(1, 3, 4, 0));
 		headerButtons.setOpaque(false);
 		headerButtons.add(rename);
+		headerButtons.add(up);
+		headerButtons.add(down);
 		header.add(headerButtons, BorderLayout.EAST);
 		card.add(header, BorderLayout.NORTH);
 
-		// Body: matching and appearance settings
+		// Body: enabled toggle, then matching and appearance settings
 		JPanel body = new JPanel(new GridBagLayout());
 		body.setOpaque(false);
 		int row = 0;
+
+		JCheckBox enabled = checkBox("Enabled", group.isEnabled(), group::setEnabled);
+		enabled.setToolTipText("Enable or disable this group");
+		enabled.addActionListener(e -> name.setForeground(enabled.isSelected() ? Color.WHITE : ColorScheme.MEDIUM_GRAY_COLOR));
+		addRow(body, row++, "", enabled);
 
 		JTextArea options = entryList(group.getMenuOptions());
 		onCommit(options, group::setMenuOptions);
@@ -336,13 +351,10 @@ class CustomEntityHighlightPanel extends PluginPanel
 			save();
 		});
 
-		JButton collapse = new JButton();
-		collapse.setFocusPainted(false);
-		collapse.setMargin(new Insets(0, 4, 0, 4));
 		Runnable showCollapsed = () ->
 		{
 			body.setVisible(!group.isCollapsed());
-			collapse.setText(group.isCollapsed() ? "+" : "-");
+			collapse.setIcon(new ChevronIcon(!group.isCollapsed()));
 			collapse.setToolTipText(group.isCollapsed() ? "Show this group's settings" : "Hide this group's settings");
 		};
 		showCollapsed.run();
@@ -354,26 +366,8 @@ class CustomEntityHighlightPanel extends PluginPanel
 			groupsContainer.repaint();
 			save();
 		});
-		headerButtons.add(collapse);
 
-		// Footer: reorder, export and delete
-		JPanel actions = new JPanel(new BorderLayout(4, 0));
-		actions.setOpaque(false);
-
-		JPanel arrows = new JPanel(new GridLayout(1, 2, 4, 0));
-		arrows.setOpaque(false);
-
-		JButton up = arrowButton(true, "Move up; later groups draw on top");
-		up.setEnabled(index > 0);
-		up.addActionListener(e -> moveGroup(index, index - 1));
-		arrows.add(up);
-
-		JButton down = arrowButton(false, "Move down; later groups draw on top");
-		down.setEnabled(index < groups.size() - 1);
-		down.addActionListener(e -> moveGroup(index, index + 1));
-		arrows.add(down);
-		actions.add(arrows, BorderLayout.WEST);
-
+		// Footer: export and delete
 		JPanel groupActions = new JPanel(new GridLayout(1, 2, 4, 0));
 		groupActions.setOpaque(false);
 
@@ -394,8 +388,7 @@ class CustomEntityHighlightPanel extends PluginPanel
 			}
 		});
 		groupActions.add(delete);
-		actions.add(groupActions, BorderLayout.CENTER);
-		card.add(actions, BorderLayout.SOUTH);
+		card.add(groupActions, BorderLayout.SOUTH);
 
 		lightenControls(card);
 		// After lightening, which would otherwise replace the red
@@ -634,6 +627,60 @@ class CustomEntityHighlightPanel extends PluginPanel
 			tip.lineTo(4.6f, 9.2f);
 			tip.closePath();
 			g2.fill(tip);
+			g2.dispose();
+		}
+
+		@Override
+		public int getIconWidth()
+		{
+			return SIZE;
+		}
+
+		@Override
+		public int getIconHeight()
+		{
+			return SIZE;
+		}
+	}
+
+	/**
+	 * A chevron pointing down when expanded or right when collapsed, drawn in the button's text color.
+	 * Stroked rather than filled, so it doesn't look like the reorder arrows.
+	 */
+	private static class ChevronIcon implements Icon
+	{
+		private static final int SIZE = 9;
+
+		private final boolean expanded;
+
+		private ChevronIcon(boolean expanded)
+		{
+			this.expanded = expanded;
+		}
+
+		@Override
+		public void paintIcon(Component c, Graphics g, int x, int y)
+		{
+			Graphics2D g2 = (Graphics2D) g.create();
+			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g2.setColor(c.isEnabled() ? c.getForeground() : ColorScheme.MEDIUM_GRAY_COLOR);
+			g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g2.translate(x, y);
+
+			Path2D.Float chevron = new Path2D.Float();
+			if (expanded)
+			{
+				chevron.moveTo(1f, 2.5f);
+				chevron.lineTo(4.5f, 6.5f);
+				chevron.lineTo(8f, 2.5f);
+			}
+			else
+			{
+				chevron.moveTo(2.5f, 1f);
+				chevron.lineTo(6.5f, 4.5f);
+				chevron.lineTo(2.5f, 8f);
+			}
+			g2.draw(chevron);
 			g2.dispose();
 		}
 
