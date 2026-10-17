@@ -95,7 +95,7 @@ class CustomEntityHighlightOverlay extends Overlay
 			if (labelGroup != -1)
 			{
 				GroupStyle labelStyle = styles[labelGroup];
-				String matched = labelStyle.labelSource == LabelSource.MATCH ? plugin.getMatchedEntry(labelGroup, comp) : null;
+				String matched = labelStyle.labelSource == LabelSource.MATCH ? plugin.getMatchedText(labelGroup, comp) : null;
 				String name = label(labelStyle, comp.getName(), matched);
 				renderName(graphics, npc.getCanvasTextLocation(graphics, name, npc.getLogicalHeight() + 40), name, labelStyle.color);
 			}
@@ -135,7 +135,7 @@ class CustomEntityHighlightOverlay extends Overlay
 			if (labelGroup != -1)
 			{
 				GroupStyle labelStyle = styles[labelGroup];
-				String matched = labelStyle.labelSource == LabelSource.MATCH ? plugin.getMatchedEntry(labelGroup, comp) : null;
+				String matched = labelStyle.labelSource == LabelSource.MATCH ? plugin.getMatchedText(labelGroup, comp) : null;
 				String name = label(labelStyle, comp.getName(), matched);
 				renderName(graphics, object.getCanvasTextLocation(graphics, name, 0), name, labelStyle.color);
 			}
@@ -268,14 +268,14 @@ class CustomEntityHighlightOverlay extends Overlay
 	/**
 	 * Returns the text to draw above an entity, falling back to its name when the chosen text is missing.
 	 */
-	private static String label(GroupStyle style, String name, String matchedEntry)
+	private static String label(GroupStyle style, String name, String matchedText)
 	{
 		switch (style.labelSource)
 		{
 			case MATCH:
-				if (matchedEntry != null)
+				if (matchedText != null)
 				{
-					return matchedEntry;
+					return matchedText;
 				}
 				break;
 			case CUSTOM:

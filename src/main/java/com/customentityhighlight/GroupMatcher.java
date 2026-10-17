@@ -2,9 +2,7 @@ package com.customentityhighlight;
 
 import com.google.common.base.Strings;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -30,13 +28,13 @@ class GroupMatcher
 	// Whether to skip entities that can't be interacted with
 	boolean interactableOnly;
 
-	// Entry -> pattern, in entry order, compiled from the entries above so equal entries always give equal patterns
+	// Patterns in entry order, compiled from the entries above so equal entries always give equal patterns
 	@EqualsAndHashCode.Exclude
 	@ToString.Exclude
-	Map<String, Pattern> optionPatterns;
+	List<Pattern> optionPatterns;
 	@EqualsAndHashCode.Exclude
 	@ToString.Exclude
-	Map<String, Pattern> namePatterns;
+	List<Pattern> namePatterns;
 
 	static GroupMatcher of(HighlightGroup group)
 	{
@@ -83,14 +81,14 @@ class GroupMatcher
 		return errors;
 	}
 
-	private static Map<String, Pattern> compileAll(List<String> entries)
+	private static List<Pattern> compileAll(List<String> entries)
 	{
-		Map<String, Pattern> patterns = new LinkedHashMap<>();
+		List<Pattern> patterns = new ArrayList<>();
 		for (String entry : entries)
 		{
 			try
 			{
-				patterns.put(entry, compile(entry));
+				patterns.add(compile(entry));
 			}
 			catch (PatternSyntaxException e)
 			{
@@ -142,7 +140,7 @@ class GroupMatcher
 	 */
 	boolean matches(String name, String[] actions)
 	{
-		return matchedEntry(name, actions) != null;
+		return matchedText(name, actions) != null;
 	}
 
 	/**
@@ -175,13 +173,13 @@ class GroupMatcher
 	}
 
 	/**
-	 * Returns the first option entry that matches one of the actions, or else the first name entry that matches
-	 * the name, as the user wrote it. Null if nothing matches.
+	 * Returns the action matched by the first option entry that matches one of them, or else the name if a name
+	 * entry matches it, as the game writes it without tags. Null if nothing matches.
 	 */
-	String matchedEntry(String name, String[] actions)
+	String matchedText(String name, String[] actions)
 	{
-		String entry = matchingOption(actions);
-		return entry != null ? entry : matchingName(name);
+		String action = matchingOption(actions);
+		return action != null ? action : matchingName(name);
 	}
 
 	/**
@@ -190,7 +188,7 @@ class GroupMatcher
 	 */
 	int firstMatchingOption(String[] options)
 	{
-		for (Pattern pattern : optionPatterns.values())
+		for (Pattern pattern : optionPatterns)
 		{
 			for (int i = 0; i < options.length; i++)
 			{
@@ -219,13 +217,13 @@ class GroupMatcher
 			}
 		}
 
-		for (Map.Entry<String, Pattern> option : optionPatterns.entrySet())
+		for (Pattern pattern : optionPatterns)
 		{
 			for (String action : normalized)
 			{
-				if (option.getValue().matcher(action).matches())
+				if (pattern.matcher(action).matches())
 				{
-					return option.getKey();
+					return action;
 				}
 			}
 		}
@@ -245,11 +243,11 @@ class GroupMatcher
 			return null;
 		}
 
-		for (Map.Entry<String, Pattern> entry : namePatterns.entrySet())
+		for (Pattern pattern : namePatterns)
 		{
-			if (entry.getValue().matcher(normalized).matches())
+			if (pattern.matcher(normalized).matches())
 			{
-				return entry.getKey();
+				return normalized;
 			}
 		}
 		return null;

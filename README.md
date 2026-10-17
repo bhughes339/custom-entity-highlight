@@ -21,7 +21,7 @@ Settings marked *Advanced* are in the group's **Advanced** section, which is clo
 | Interactable only | *Advanced.* Skips NPCs and objects you can't interact with: ones with no right-click option besides Examine, such as decorative bank booths, and NPCs the game doesn't let you click. Objects that change form are highlighted only while their current form is interactable. |
 | Swap left-click | *Advanced.* Makes the option matched by the group's first matching Options entry the left-click option for matched NPCs and objects. Names entries aren't used. Options the game has moved down the menu, such as Attack under your NPC attack option setting, are never moved to left-click. |
 | Show labels | *Advanced.* Draws text above each highlight. |
-| Label / Text | *Advanced.* What Show labels draws: the NPC or object **Name**, the **Match** (the first Options entry that matched, as you wrote it, or else the first Names entry), or **Custom** text typed in the Text field. Falls back to the name if the custom text is blank. |
+| Label / Text | *Advanced.* What Show labels draws: the NPC or object **Name**, the **Match** (the menu option matched by the first Options entry that matched, as the game writes it, or else the name if a Names entry matched), or **Custom** text typed in the Text field. Falls back to the name if the custom text is blank. |
 | ▲ / ▼ | Move the group up or down the list. |
 | Export / Delete | Copy the group to the clipboard to share it, or remove it. |
 

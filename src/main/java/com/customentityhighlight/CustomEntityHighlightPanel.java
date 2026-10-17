@@ -305,7 +305,7 @@ class CustomEntityHighlightPanel extends PluginPanel
 		JComboBox<LabelSource> labelSource = new JComboBox<>(LabelSource.values());
 		labelSource.setSelectedItem(group.getLabelSourceOrDefault());
 		labelSource.setToolTipText("<html>Text drawn when Show labels is on<br>Name: the NPC or object name<br>"
-			+ "Match: the first Options entry it matched, or else the first Names entry<br>Custom: the text below</html>");
+			+ "Match: the option the first matching Options entry matched, or else the name<br>Custom: the text below</html>");
 		labelSource.addActionListener(e ->
 		{
 			LabelSource selected = (LabelSource) labelSource.getSelectedItem();

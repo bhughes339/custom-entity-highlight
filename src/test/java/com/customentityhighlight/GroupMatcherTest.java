@@ -73,13 +73,14 @@ public class GroupMatcherTest
 	}
 
 	@Test
-	public void reportsFirstMatchedEntry()
+	public void reportsFirstMatchedText()
 	{
-		// Entries are checked in the order written, options before names
-		assertEquals("coll*", matcher("talk, coll*, bank", "banker").matchedEntry("Banker", BANKER_ACTIONS));
-		assertEquals("/bank.*/", matcher("pickpocket", "chest, /bank.*/").matchedEntry("Banker", BANKER_ACTIONS));
-		assertEquals("bank", matcher("bank", "").matchedEntry("Banker", new String[]{"<col=ff0000>Bank</col>"}));
-		assertNull(matcher("steal", "chest").matchedEntry("Banker", BANKER_ACTIONS));
+		// Entries are checked in the order written, options before names, and the entity's own text is returned
+		assertEquals("Collect", matcher("talk, coll*, bank", "banker").matchedText("Banker", BANKER_ACTIONS));
+		assertEquals("Banker", matcher("pickpocket", "chest, /bank.*/").matchedText("Banker", BANKER_ACTIONS));
+		assertEquals("Bank", matcher("bank", "").matchedText("Banker", new String[]{"<col=ff0000>Bank</col>"}));
+		assertEquals("Banker", matcher("", "banker").matchedText("<col=ffff00>Banker</col>", null));
+		assertNull(matcher("steal", "chest").matchedText("Banker", BANKER_ACTIONS));
 	}
 
 	@Test
