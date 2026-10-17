@@ -4,7 +4,7 @@ Highlights NPCs and objects by their right-click menu options or their name. Thi
 
 ## Highlight groups
 
-Open the **Custom Entity Highlight** side panel in RuneLite. Click **Add group** to add a new highlight group and define its entries and appearance options, or **Import group** to add one someone has shared with you (see [Sharing groups](#sharing-groups)).
+Open the ![Custom Entity Highlight icon](src/main/resources/com/customentityhighlight/panel_icon.png) **Custom Entity Highlight** side panel in RuneLite. Click **Add group** to add a new highlight group and define its entries and appearance options, or **Import group** to add one someone has shared with you (see [Sharing groups](#sharing-groups)).
 
 Settings marked *Advanced* are in the group's **Advanced** section, which is closed by default. Click the **+** next to it to show them.
 
