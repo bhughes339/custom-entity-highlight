@@ -124,6 +124,29 @@ public class GroupMatcherTest
 	}
 
 	@Test
+	public void exclusionsPreventMatches()
+	{
+		// An exclusion in either list stops a match from the other
+		assertFalse(matcher("bank", "-banker").matches("Banker", BANKER_ACTIONS));
+		assertTrue(matcher("bank", "-banker").matches("Bank chest", new String[]{"Bank"}));
+		assertFalse(matcher("-talk*", "bank*").matches("Banker", BANKER_ACTIONS));
+		assertTrue(matcher("-talk*", "bank*").matches("Bank chest", new String[]{"Bank"}));
+		assertNull(matcher("bank, collect", "- /bank.*/").matchedText("Banker", BANKER_ACTIONS));
+		// Exclusions alone match nothing
+		assertFalse(matcher("-steal", "-chest").matches("Banker", BANKER_ACTIONS));
+		// A lone hyphen is literal
+		assertTrue(matcher("", "-").matches("-", null));
+	}
+
+	@Test
+	public void excludedRegexesCanContainCommas()
+	{
+		assertEquals(Arrays.asList("-/a{2,3}/", "- /x,y/", "bank"), GroupMatcher.splitEntries("-/a{2,3}/, - /x,y/, bank"));
+		assertFalse(matcher("bank", "-/ba{1,2}nker/").matches("Banker", BANKER_ACTIONS));
+		assertEquals(1, GroupMatcher.invalidEntries("-/bank(/, -banker").size());
+	}
+
+	@Test
 	public void matchesIfAnyListMatches()
 	{
 		GroupMatcher matcher = matcher("collect", "banker");

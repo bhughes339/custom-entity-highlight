@@ -94,7 +94,8 @@ class CustomEntityHighlightPanel extends PluginPanel
 
 		JLabel help = new JLabel("<html>Each group highlights NPCs and objects that match any of its menu options "
 			+ "or names. Separate entries with commas or new lines; options and names can use * as a wildcard, "
-			+ "e.g. <b>bank*</b>, or a regex in slashes, e.g. <b>/bank(-all)?/</b>.</html>");
+			+ "e.g. <b>bank*</b>, or a regex in slashes, e.g. <b>/bank(-all)?/</b>. Start an entry with - to never "
+			+ "highlight what it matches, e.g. <b>-bank booth</b>.</html>");
 		help.setFont(FontManager.getRunescapeSmallFont());
 		header.add(help, BorderLayout.CENTER);
 
@@ -247,13 +248,13 @@ class CustomEntityHighlightPanel extends PluginPanel
 		JTextArea options = entryList(group.getMenuOptions());
 		onCommit(options, group::setMenuOptions);
 		showInvalidEntries(options, "Right-click menu options, e.g. \"bank, collect\", or one per line. "
-			+ "Use * as a wildcard, or /regex/.");
+			+ "Use * as a wildcard, or /regex/. Start with - to exclude, e.g. \"-pickpocket\".");
 		addRow(body, row++, "Options", scrollable(options));
 
 		JTextArea names = entryList(group.getEntityNames());
 		onCommit(names, group::setEntityNames);
 		showInvalidEntries(names, "NPC or object names, e.g. \"banker, *chest\", or one per line. "
-			+ "Use * as a wildcard, or /regex/.");
+			+ "Use * as a wildcard, or /regex/. Start with - to exclude, e.g. \"-bank booth\".");
 		addRow(body, row++, "Names", scrollable(names));
 
 		// Each box gets its own width rather than an equal share, so "Objects" isn't cut off
