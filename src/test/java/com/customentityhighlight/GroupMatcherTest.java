@@ -73,13 +73,14 @@ public class GroupMatcherTest
 	}
 
 	@Test
-	public void reportsFirstMatchedEntry()
+	public void reportsFirstMatchedText()
 	{
-		// Entries are checked in the order written, options before names
-		assertEquals("coll*", matcher("talk, coll*, bank", "banker").matchedEntry("Banker", BANKER_ACTIONS));
-		assertEquals("/bank.*/", matcher("pickpocket", "chest, /bank.*/").matchedEntry("Banker", BANKER_ACTIONS));
-		assertEquals("bank", matcher("bank", "").matchedEntry("Banker", new String[]{"<col=ff0000>Bank</col>"}));
-		assertNull(matcher("steal", "chest").matchedEntry("Banker", BANKER_ACTIONS));
+		// Entries are checked in the order written, options before names, and the entity's own text is returned
+		assertEquals("Collect", matcher("talk, coll*, bank", "banker").matchedText("Banker", BANKER_ACTIONS));
+		assertEquals("Banker", matcher("pickpocket", "chest, /bank.*/").matchedText("Banker", BANKER_ACTIONS));
+		assertEquals("Bank", matcher("bank", "").matchedText("Banker", new String[]{"<col=ff0000>Bank</col>"}));
+		assertEquals("Banker", matcher("", "banker").matchedText("<col=ffff00>Banker</col>", null));
+		assertNull(matcher("steal", "chest").matchedText("Banker", BANKER_ACTIONS));
 	}
 
 	@Test
@@ -93,6 +94,26 @@ public class GroupMatcherTest
 	}
 
 	@Test
+	public void interactableOnlySkipsEntitiesWithoutOptions()
+	{
+		HighlightGroup group = new HighlightGroup();
+		group.setEntityNames("bank booth");
+		GroupMatcher any = GroupMatcher.of(group);
+		group.setInteractableOnly(true);
+		GroupMatcher interactable = GroupMatcher.of(group);
+
+		String[] none = {null, "", "<col=ff0000></col>", null, null};
+		assertTrue(any.matches("Bank booth", none, true));
+		assertFalse(interactable.matches("Bank booth", none, true));
+		assertFalse(interactable.matches("Bank booth", null, true));
+		assertTrue(interactable.matches("Bank booth", new String[]{null, "Bank", null}, true));
+		// NPCs the game won't let you click don't count, even with options
+		assertFalse(interactable.matches("Bank booth", BANKER_ACTIONS, false));
+		// Changing the setting changes which entities match, so the plugin rescans
+		assertFalse(any.equals(interactable));
+	}
+
+	@Test
 	public void ignoresInvalidRegexes()
 	{
 		GroupMatcher matcher = matcher("", "/bank(/, banker");
@@ -100,6 +121,29 @@ public class GroupMatcherTest
 		assertFalse(matcher.matches("Bank(", null));
 		assertEquals(1, GroupMatcher.invalidEntries("/bank(/, banker").size());
 		assertTrue(GroupMatcher.invalidEntries("/bank/, bank(").isEmpty());
+	}
+
+	@Test
+	public void exclusionsPreventMatches()
+	{
+		// An exclusion in either list stops a match from the other
+		assertFalse(matcher("bank", "-banker").matches("Banker", BANKER_ACTIONS));
+		assertTrue(matcher("bank", "-banker").matches("Bank chest", new String[]{"Bank"}));
+		assertFalse(matcher("-talk*", "bank*").matches("Banker", BANKER_ACTIONS));
+		assertTrue(matcher("-talk*", "bank*").matches("Bank chest", new String[]{"Bank"}));
+		assertNull(matcher("bank, collect", "- /bank.*/").matchedText("Banker", BANKER_ACTIONS));
+		// Exclusions alone match nothing
+		assertFalse(matcher("-steal", "-chest").matches("Banker", BANKER_ACTIONS));
+		// A lone hyphen is literal
+		assertTrue(matcher("", "-").matches("-", null));
+	}
+
+	@Test
+	public void excludedRegexesCanContainCommas()
+	{
+		assertEquals(Arrays.asList("-/a{2,3}/", "- /x,y/", "bank"), GroupMatcher.splitEntries("-/a{2,3}/, - /x,y/, bank"));
+		assertFalse(matcher("bank", "-/ba{1,2}nker/").matches("Banker", BANKER_ACTIONS));
+		assertEquals(1, GroupMatcher.invalidEntries("-/bank(/, -banker").size());
 	}
 
 	@Test

@@ -132,9 +132,9 @@ public class CustomEntityHighlightPlugin extends Plugin
 	private final Map<Integer, BitSet> npcMatches = new HashMap<>();
 	private final Map<Integer, BitSet> objectMatches = new HashMap<>();
 
-	// Group index and definition id -> the entry that group matched on, for Match labels
-	private final Map<Long, String> npcMatchedEntries = new HashMap<>();
-	private final Map<Long, String> objectMatchedEntries = new HashMap<>();
+	// Group index and definition id -> the option or name that group matched on, for Match labels
+	private final Map<Long, String> npcMatchedTexts = new HashMap<>();
+	private final Map<Long, String> objectMatchedTexts = new HashMap<>();
 
 	@Provides
 	CustomEntityHighlightConfig provideConfig(ConfigManager configManager)
@@ -172,8 +172,8 @@ public class CustomEntityHighlightPlugin extends Plugin
 			objects.clear();
 			npcMatches.clear();
 			objectMatches.clear();
-			npcMatchedEntries.clear();
-			objectMatchedEntries.clear();
+			npcMatchedTexts.clear();
+			objectMatchedTexts.clear();
 			groups = Collections.emptyList();
 			matchers = Collections.emptyList();
 		});
@@ -430,21 +430,21 @@ public class CustomEntityHighlightPlugin extends Plugin
 	}
 
 	/**
-	 * Returns the entry, as written, that the group matched the NPC's current form on, or null if it doesn't match.
+	 * Returns the option or name, as the game writes it, that the group matched the NPC's current form on, or null if it doesn't match.
 	 */
-	String getMatchedEntry(int group, NPCComposition current)
+	String getMatchedText(int group, NPCComposition current)
 	{
-		return npcMatchedEntries.computeIfAbsent(matchKey(group, current.getId()),
-			k -> matchers.get(group).matchedEntry(current.getName(), current.getActions()));
+		return npcMatchedTexts.computeIfAbsent(matchKey(group, current.getId()),
+			k -> matchers.get(group).matchedText(current.getName(), current.getActions()));
 	}
 
 	/**
-	 * Returns the entry, as written, that the group matched the object's current form on, or null if it doesn't match.
+	 * Returns the option or name, as the game writes it, that the group matched the object's current form on, or null if it doesn't match.
 	 */
-	String getMatchedEntry(int group, ObjectComposition current)
+	String getMatchedText(int group, ObjectComposition current)
 	{
-		return objectMatchedEntries.computeIfAbsent(matchKey(group, current.getId()),
-			k -> matchers.get(group).matchedEntry(current.getName(), current.getActions()));
+		return objectMatchedTexts.computeIfAbsent(matchKey(group, current.getId()),
+			k -> matchers.get(group).matchedText(current.getName(), current.getActions()));
 	}
 
 	private static long matchKey(int group, int id)
@@ -492,8 +492,8 @@ public class CustomEntityHighlightPlugin extends Plugin
 			matchers = loadedMatchers;
 			npcMatches.clear();
 			objectMatches.clear();
-			npcMatchedEntries.clear();
-			objectMatchedEntries.clear();
+			npcMatchedTexts.clear();
+			objectMatchedTexts.clear();
 			npcs.clear();
 			objects.clear();
 
@@ -592,7 +592,7 @@ public class CustomEntityHighlightPlugin extends Plugin
 		return npcMatches.computeIfAbsent(id, i ->
 		{
 			NPCComposition comp = client.getNpcDefinition(i);
-			return comp != null ? matchingGroups(comp.getName(), comp.getActions()) : new BitSet();
+			return comp != null ? matchingGroups(comp.getName(), comp.getActions(), comp.isInteractible()) : new BitSet();
 		});
 	}
 
@@ -601,7 +601,8 @@ public class CustomEntityHighlightPlugin extends Plugin
 		return objectMatches.computeIfAbsent(id, i ->
 		{
 			ObjectComposition comp = client.getObjectDefinition(i);
-			return comp != null ? matchingGroups(comp.getName(), comp.getActions()) : new BitSet();
+			// Objects have no clickable flag; whether they have options decides it
+			return comp != null ? matchingGroups(comp.getName(), comp.getActions(), true) : new BitSet();
 		});
 	}
 
@@ -622,12 +623,12 @@ public class CustomEntityHighlightPlugin extends Plugin
 		return false;
 	}
 
-	private BitSet matchingGroups(String name, String[] actions)
+	private BitSet matchingGroups(String name, String[] actions, boolean clickable)
 	{
 		BitSet matches = new BitSet();
 		for (int i = 0; i < matchers.size(); i++)
 		{
-			if (matchers.get(i).matches(name, actions))
+			if (matchers.get(i).matches(name, actions, clickable))
 			{
 				matches.set(i);
 			}

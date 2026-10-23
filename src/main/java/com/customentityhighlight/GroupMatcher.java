@@ -2,9 +2,8 @@ package com.customentityhighlight;
 
 import com.google.common.base.Strings;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -23,24 +22,36 @@ class GroupMatcher
 	private static final String NULL_NAME = "null";
 
 	// Either a regex in slashes, which may contain commas, or anything up to the next comma or newline
-	private static final Pattern ENTRY = Pattern.compile("\\s*(/.*?/)\\s*(?:[,\\n]|$)|([^,\\n]*)[,\\n]?");
+	private static final Pattern ENTRY = Pattern.compile("\\s*(-?\\s*/.*?/)\\s*(?:[,\\n]|$)|([^,\\n]*)[,\\n]?");
+
+	// Prefix for entries that stop an entity from matching
+	private static final String EXCLUDE_PREFIX = "-";
 
 	List<String> options;
 	List<String> names;
+	// Whether to skip entities that can't be interacted with
+	boolean interactableOnly;
 
-	// Entry -> pattern, in entry order, compiled from the entries above so equal entries always give equal patterns
+	// Patterns in entry order, compiled from the entries above so equal entries always give equal patterns
 	@EqualsAndHashCode.Exclude
 	@ToString.Exclude
-	Map<String, Pattern> optionPatterns;
+	List<Pattern> optionPatterns;
 	@EqualsAndHashCode.Exclude
 	@ToString.Exclude
-	Map<String, Pattern> namePatterns;
+	List<Pattern> namePatterns;
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	List<Pattern> excludedOptionPatterns;
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	List<Pattern> excludedNamePatterns;
 
 	static GroupMatcher of(HighlightGroup group)
 	{
 		List<String> options = splitEntries(group.getMenuOptions());
 		List<String> names = splitEntries(group.getEntityNames());
-		return new GroupMatcher(options, names, compileAll(options), compileAll(names));
+		return new GroupMatcher(options, names, group.isInteractableOnly(), compileAll(options, false),
+			compileAll(names, false), compileAll(options, true), compileAll(names, true));
 	}
 
 	/**
@@ -81,14 +92,22 @@ class GroupMatcher
 		return errors;
 	}
 
-	private static Map<String, Pattern> compileAll(List<String> entries)
+	/**
+	 * Compiles the entries that are, or aren't, exclusions.
+	 */
+	private static List<Pattern> compileAll(List<String> entries, boolean excluded)
 	{
-		Map<String, Pattern> patterns = new LinkedHashMap<>();
+		List<Pattern> patterns = new ArrayList<>();
 		for (String entry : entries)
 		{
+			if (isExclusion(entry) != excluded)
+			{
+				continue;
+			}
+
 			try
 			{
-				patterns.put(entry, compile(entry));
+				patterns.add(compile(entry));
 			}
 			catch (PatternSyntaxException e)
 			{
@@ -98,17 +117,30 @@ class GroupMatcher
 		return patterns;
 	}
 
+	/**
+	 * Whether the entry starts with a hyphen, so entities it matches are never highlighted. A lone hyphen is literal.
+	 */
+	private static boolean isExclusion(String entry)
+	{
+		return entry.length() > 1 && entry.startsWith(EXCLUDE_PREFIX);
+	}
+
 	private static boolean isRegex(String entry)
 	{
 		return entry.length() > 2 && entry.startsWith("/") && entry.endsWith("/");
 	}
 
 	/**
-	 * Compiles an entry into a case-insensitive pattern that must match the whole text.
+	 * Compiles an entry, without any exclusion prefix, into a case-insensitive pattern that must match the whole text.
 	 * Entries in slashes are regexes; otherwise * matches any text and everything else is literal.
 	 */
 	private static Pattern compile(String entry)
 	{
+		if (isExclusion(entry))
+		{
+			entry = entry.substring(EXCLUDE_PREFIX.length()).trim();
+		}
+
 		if (isRegex(entry))
 		{
 			return Pattern.compile(entry.substring(1, entry.length() - 1), Pattern.CASE_INSENSITIVE);
@@ -136,21 +168,58 @@ class GroupMatcher
 	}
 
 	/**
-	 * Whether a definition with this name and menu actions matches any of the entries.
+	 * Whether a definition with this name and menu actions matches any of the entries and none of the exclusions,
+	 * ignoring interactability.
 	 */
 	boolean matches(String name, String[] actions)
 	{
-		return matchedEntry(name, actions) != null;
+		return matchedText(name, actions) != null;
 	}
 
 	/**
-	 * Returns the first option entry that matches one of the actions, or else the first name entry that matches
-	 * the name, as the user wrote it. Null if nothing matches.
+	 * Whether a definition matches any of the entries and, if the group is limited to interactable entities, is one.
+	 * An entity is interactable if the game lets it be clicked and it has an option other than Examine, which
+	 * definitions don't list.
 	 */
-	String matchedEntry(String name, String[] actions)
+	boolean matches(String name, String[] actions, boolean clickable)
 	{
-		String entry = matchingOption(actions);
-		return entry != null ? entry : matchingName(name);
+		if (interactableOnly && !(clickable && hasAction(actions)))
+		{
+			return false;
+		}
+		return matches(name, actions);
+	}
+
+	private static boolean hasAction(String[] actions)
+	{
+		if (actions != null)
+		{
+			for (String action : actions)
+			{
+				if (action != null && !Text.removeTags(action).trim().isEmpty())
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Returns the action matched by the first option entry that matches one of them, or else the name if a name
+	 * entry matches it, as the game writes it without tags. Null if nothing matches or any exclusion entry matches.
+	 */
+	String matchedText(String name, String[] actions)
+	{
+		List<String> actionTexts = actionTexts(actions);
+		List<String> nameTexts = nameTexts(name);
+		if (firstMatch(excludedOptionPatterns, actionTexts) != null || firstMatch(excludedNamePatterns, nameTexts) != null)
+		{
+			return null;
+		}
+
+		String action = firstMatch(optionPatterns, actionTexts);
+		return action != null ? action : firstMatch(namePatterns, nameTexts);
 	}
 
 	/**
@@ -159,7 +228,7 @@ class GroupMatcher
 	 */
 	int firstMatchingOption(String[] options)
 	{
-		for (Pattern pattern : optionPatterns.values())
+		for (Pattern pattern : optionPatterns)
 		{
 			for (int i = 0; i < options.length; i++)
 			{
@@ -172,53 +241,48 @@ class GroupMatcher
 		return -1;
 	}
 
-	private String matchingOption(String[] actions)
+	private static List<String> actionTexts(String[] actions)
 	{
-		if (optionPatterns.isEmpty() || actions == null)
+		if (actions == null)
 		{
-			return null;
+			return Collections.emptyList();
 		}
 
-		List<String> normalized = new ArrayList<>(actions.length);
+		List<String> texts = new ArrayList<>(actions.length);
 		for (String action : actions)
 		{
 			if (action != null)
 			{
-				normalized.add(Text.removeTags(action));
+				texts.add(Text.removeTags(action));
 			}
 		}
-
-		for (Map.Entry<String, Pattern> option : optionPatterns.entrySet())
-		{
-			for (String action : normalized)
-			{
-				if (option.getValue().matcher(action).matches())
-				{
-					return option.getKey();
-				}
-			}
-		}
-		return null;
+		return texts;
 	}
 
-	private String matchingName(String name)
+	private static List<String> nameTexts(String name)
 	{
-		if (namePatterns.isEmpty() || name == null)
+		if (name == null)
 		{
-			return null;
+			return Collections.emptyList();
 		}
 
-		String normalized = Text.removeTags(name);
-		if (NULL_NAME.equals(normalized))
-		{
-			return null;
-		}
+		String text = Text.removeTags(name);
+		return NULL_NAME.equals(text) ? Collections.emptyList() : Collections.singletonList(text);
+	}
 
-		for (Map.Entry<String, Pattern> entry : namePatterns.entrySet())
+	/**
+	 * Returns the text matched by the first pattern that matches any of them, or null if none match.
+	 */
+	private static String firstMatch(List<Pattern> patterns, List<String> texts)
+	{
+		for (Pattern pattern : patterns)
 		{
-			if (entry.getValue().matcher(normalized).matches())
+			for (String text : texts)
 			{
-				return entry.getKey();
+				if (pattern.matcher(text).matches())
+				{
+					return text;
+				}
 			}
 		}
 		return null;

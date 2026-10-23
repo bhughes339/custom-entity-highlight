@@ -29,6 +29,8 @@ class HighlightGroup
 	private String entityNames = "";
 	private boolean highlightNpcs = true;
 	private boolean highlightObjects = true;
+	// Skips NPCs and objects that can't be clicked or have no options besides Examine
+	private boolean interactableOnly = false;
 	// Moves the option matched by the first matching menuOptions entry to left-click
 	private boolean swapLeftClick = false;
 	private HighlightStyle style = HighlightStyle.OUTLINE;
