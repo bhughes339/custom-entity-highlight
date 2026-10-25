@@ -131,6 +131,8 @@ public class CustomEntityHighlightPlugin extends Plugin
 	// Definition id -> indexes of the groups whose entries match one of that definition's options
 	private final Map<Integer, BitSet> npcMatches = new HashMap<>();
 	private final Map<Integer, BitSet> objectMatches = new HashMap<>();
+	// Definition id -> indexes of the groups that match it as another player's pet, which can't be interacted with
+	private final Map<Integer, BitSet> otherFollowerMatches = new HashMap<>();
 
 	// Group index and definition id -> the option or name that group matched on, for Match labels
 	private final Map<Long, String> npcMatchedTexts = new HashMap<>();
@@ -172,6 +174,7 @@ public class CustomEntityHighlightPlugin extends Plugin
 			objects.clear();
 			npcMatches.clear();
 			objectMatches.clear();
+			otherFollowerMatches.clear();
 			npcMatchedTexts.clear();
 			objectMatchedTexts.clear();
 			groups = Collections.emptyList();
@@ -249,7 +252,7 @@ public class CustomEntityHighlightPlugin extends Plugin
 		if (isNpc)
 		{
 			NPCComposition comp = top.getNpc() != null ? top.getNpc().getTransformedComposition() : null;
-			matches = comp != null ? getMatchingGroups(comp) : null;
+			matches = comp != null ? getMatchingGroups(top.getNpc(), comp) : null;
 		}
 		else
 		{
@@ -414,11 +417,13 @@ public class CustomEntityHighlightPlugin extends Plugin
 	}
 
 	/**
-	 * Returns the indexes of the groups that match the NPC's current form, or null if none do.
+	 * Returns the indexes of the groups that match the NPC in its current form, or null if none do.
 	 */
-	BitSet getMatchingGroups(NPCComposition current)
+	BitSet getMatchingGroups(NPC npc, NPCComposition current)
 	{
-		return nullIfEmpty(npcMatches(current.getId()));
+		// Other players' pets only offer Examine, whatever their definition lists
+		boolean otherFollower = current.isFollower() && npc != client.getFollower();
+		return nullIfEmpty(otherFollower ? otherFollowerMatches(current.getId()) : npcMatches(current.getId()));
 	}
 
 	/**
@@ -492,6 +497,7 @@ public class CustomEntityHighlightPlugin extends Plugin
 			matchers = loadedMatchers;
 			npcMatches.clear();
 			objectMatches.clear();
+			otherFollowerMatches.clear();
 			npcMatchedTexts.clear();
 			objectMatchedTexts.clear();
 			npcs.clear();
@@ -593,6 +599,15 @@ public class CustomEntityHighlightPlugin extends Plugin
 		{
 			NPCComposition comp = client.getNpcDefinition(i);
 			return comp != null ? matchingGroups(comp.getName(), comp.getActions(), comp.isInteractible()) : new BitSet();
+		});
+	}
+
+	private BitSet otherFollowerMatches(int id)
+	{
+		return otherFollowerMatches.computeIfAbsent(id, i ->
+		{
+			NPCComposition comp = client.getNpcDefinition(i);
+			return comp != null ? matchingGroups(comp.getName(), comp.getActions(), false) : new BitSet();
 		});
 	}
 

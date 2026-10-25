@@ -303,7 +303,8 @@ class CustomEntityHighlightPanel extends PluginPanel
 
 		JCheckBox interactable = checkBox("Interactable only", group.isInteractableOnly(), group::setInteractableOnly);
 		interactable.setToolTipText("<html>Only highlight NPCs and objects you can interact with: ones that have "
-			+ "a right-click<br>option other than Examine, e.g. skipping decorative bank booths.</html>");
+			+ "a right-click<br>option other than Examine, e.g. skipping decorative bank booths and other "
+			+ "players' pets.</html>");
 		advanced.addAll(addRow(body, row++, "", interactable));
 
 		JCheckBox swap = checkBox("Swap left-click", group.isSwapLeftClick(), group::setSwapLeftClick);
