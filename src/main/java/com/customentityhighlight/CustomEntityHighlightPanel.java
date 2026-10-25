@@ -240,10 +240,10 @@ class CustomEntityHighlightPanel extends PluginPanel
 		body.setOpaque(false);
 		int row = 0;
 
-		JCheckBox enabled = checkBox("Enabled", group.isEnabled(), group::setEnabled);
+		JCheckBox enabled = checkBox(null, group.isEnabled(), group::setEnabled);
 		enabled.setToolTipText("Enable or disable this group");
 		enabled.addActionListener(e -> name.setForeground(enabled.isSelected() ? Color.WHITE : ColorScheme.MEDIUM_GRAY_COLOR));
-		addRow(body, row++, "", enabled);
+		addRow(body, row++, "Enable", enabled);
 
 		JTextArea options = entryList(group.getMenuOptions());
 		onCommit(options, group::setMenuOptions);
