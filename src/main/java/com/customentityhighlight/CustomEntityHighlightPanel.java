@@ -281,17 +281,18 @@ class CustomEntityHighlightPanel extends PluginPanel
 		addRow(body, row++, "Fill", colorButton("Fill color", group.getFillColorValue(),
 			color -> group.setFillColor(color.getRGB())));
 
-		// Advanced: rows hidden until expanded; they stay in the same grid so their labels line up
+		// Advanced: rows hidden until expanded; they stay in the same grid so their labels line up.
+		// The header mirrors the group header, with a smaller title.
 		JPanel advancedHeader = new JPanel(new BorderLayout(4, 0));
 		advancedHeader.setOpaque(false);
 		advancedHeader.setBorder(new EmptyBorder(4, 0, 0, 0));
-		JLabel advancedTitle = new JLabel("Advanced");
-		advancedTitle.setFont(FontManager.getRunescapeSmallFont());
-		advancedHeader.add(advancedTitle, BorderLayout.WEST);
 		JButton advancedToggle = new JButton();
 		advancedToggle.setFocusPainted(false);
-		advancedToggle.setMargin(new Insets(0, 4, 0, 4));
-		advancedHeader.add(advancedToggle, BorderLayout.EAST);
+		advancedHeader.add(advancedToggle, BorderLayout.WEST);
+		JLabel advancedTitle = new JLabel("Advanced");
+		advancedTitle.setFont(FontManager.getRunescapeSmallFont());
+		advancedTitle.setForeground(Color.WHITE);
+		advancedHeader.add(advancedTitle, BorderLayout.CENTER);
 		addWideRow(body, row++, advancedHeader);
 
 		List<JComponent> advanced = new ArrayList<>();
@@ -340,7 +341,7 @@ class CustomEntityHighlightPanel extends PluginPanel
 			{
 				component.setVisible(group.isAdvancedExpanded());
 			}
-			advancedToggle.setText(group.isAdvancedExpanded() ? "-" : "+");
+			advancedToggle.setIcon(new ChevronIcon(group.isAdvancedExpanded()));
 			advancedToggle.setToolTipText(group.isAdvancedExpanded() ? "Hide advanced settings" : "Show advanced settings");
 		};
 		showAdvanced.run();
