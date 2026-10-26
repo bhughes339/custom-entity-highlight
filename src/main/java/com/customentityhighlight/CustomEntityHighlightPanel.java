@@ -92,13 +92,6 @@ class CustomEntityHighlightPanel extends PluginPanel
 		title.setForeground(Color.WHITE);
 		header.add(title, BorderLayout.NORTH);
 
-		JLabel help = new JLabel("<html>Each group highlights NPCs and objects that match any of its menu options "
-			+ "or names. Separate entries with commas or new lines; options and names can use * as a wildcard, "
-			+ "e.g. <b>bank*</b>, or a regex in slashes, e.g. <b>/bank(-all)?/</b>. Start an entry with - to never "
-			+ "highlight what it matches, e.g. <b>-bank booth</b>.</html>");
-		help.setFont(FontManager.getRunescapeSmallFont());
-		header.add(help, BorderLayout.CENTER);
-
 		JButton addButton = new JButton("Add group");
 		addButton.setFocusPainted(false);
 		addButton.addActionListener(e ->
