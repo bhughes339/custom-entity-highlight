@@ -160,8 +160,6 @@ class CustomEntityHighlightPanel extends PluginPanel
 			return;
 		}
 
-		// Show the imported group's settings, however it was left when exported
-		group.setCollapsed(false);
 		groups.add(group);
 		save();
 		rebuild();

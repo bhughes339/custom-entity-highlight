@@ -1,6 +1,7 @@
 package com.customentityhighlight;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import java.awt.Color;
 import java.nio.charset.StandardCharsets;
@@ -17,6 +18,8 @@ class HighlightGroup
 	static final int MIN_BORDER_WIDTH = 1;
 	static final int MAX_BORDER_WIDTH = 10;
 	static final int MAX_OUTLINE_FEATHER = 4;
+	// Left out of export strings; imported groups use the defaults
+	private static final String[] PANEL_STATE_FIELDS = {"enabled", "collapsed", "advancedExpanded"};
 
 	private String name = "New group";
 	private boolean enabled = true;
@@ -60,15 +63,21 @@ class HighlightGroup
 	}
 
 	/**
-	 * Encodes the group as Base64 JSON, for sharing as text.
+	 * Encodes the group as Base64 JSON, for sharing as text. Panel state isn't included.
 	 */
 	String toExportString(Gson gson)
 	{
-		return Base64.getEncoder().encodeToString(gson.toJson(this).getBytes(StandardCharsets.UTF_8));
+		JsonObject json = gson.toJsonTree(this).getAsJsonObject();
+		for (String field : PANEL_STATE_FIELDS)
+		{
+			json.remove(field);
+		}
+		return Base64.getEncoder().encodeToString(gson.toJson(json).getBytes(StandardCharsets.UTF_8));
 	}
 
 	/**
 	 * Decodes a group from {@link #toExportString}. Whitespace is ignored. Returns null if the text isn't a group.
+	 * Panel state is reset to defaults, including in strings exported before it was left out.
 	 */
 	static HighlightGroup fromExportString(Gson gson, String text)
 	{
@@ -80,7 +89,14 @@ class HighlightGroup
 		try
 		{
 			byte[] json = Base64.getDecoder().decode(text.replaceAll("\\s", ""));
-			return gson.fromJson(new String(json, StandardCharsets.UTF_8), HighlightGroup.class);
+			HighlightGroup group = gson.fromJson(new String(json, StandardCharsets.UTF_8), HighlightGroup.class);
+			if (group != null)
+			{
+				group.setEnabled(true);
+				group.setCollapsed(false);
+				group.setAdvancedExpanded(false);
+			}
+			return group;
 		}
 		catch (IllegalArgumentException | JsonParseException e)
 		{
